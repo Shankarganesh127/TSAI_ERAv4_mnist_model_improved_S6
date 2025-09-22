@@ -4,7 +4,7 @@ import torch.utils as utils
 from torchvision import datasets, transforms
 
 class DataSetup:
-    def __init__(self, batch_size_train=64, batch_size_test=1000, shuffle_train=True, shuffle_test=False, num_workers=2, pin_memory=True):
+    def __init__(self, batch_size_train=64, batch_size_test=1000, shuffle_train=True, shuffle_test=False, num_workers=2, pin_memory=None):
         self.batch_size_train = batch_size_train
         self.batch_size_test = batch_size_test
         self.shuffle_train = shuffle_train
