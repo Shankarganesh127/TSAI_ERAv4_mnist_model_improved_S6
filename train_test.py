@@ -31,23 +31,29 @@ class train_test_model:
     def train(self, model, device, train_loader, optimizer, criterion):
         self.model.train()
         pbar = tqdm(self.train_loader)
-        train_loss, correct = 0, 0
+        train_loss, correct, processed = 0, 0, 0
         for data, target in pbar:
+            # get samples and move to device
             data, target = data.to(self.device), target.to(self.device)
+            # Initialize optimizer
             self.optimizer.zero_grad()
+            # Prediction
             output = self.model(data)
+            # Calculate loss
             loss = self.criterion(output, target)
+            # Backpropagation
             loss.backward()
             self.optimizer.step()
-            
+            # -----------------------------
             # Accumulate loss and calculate accuracy
             train_loss += loss.item()
             pred = output.argmax(dim=1, keepdim=True)
             correct += pred.eq(target.view_as(pred)).sum().item()
+            processed += len(data)
             
             # Update progress bar with current statistics
-            pbar.set_description(desc=f"Train Loss={loss.item():.4f} Accuracy={100. * correct / len(self.train_loader.dataset):.2f}")
-        
+            pbar.set_description(desc=f"Train Loss={train_loss / processed:.4f} Accuracy={100. * correct / processed:.2f}")
+
         return 100. * correct / len(self.train_loader.dataset)
 
     def test(self, model, device, test_loader, criterion):
