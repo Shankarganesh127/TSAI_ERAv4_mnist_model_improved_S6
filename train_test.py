@@ -41,6 +41,10 @@ class train_test_model:
             # Backpropagation
             loss.backward()
             self.optimizer.step()
+            # Per-batch scheduler stepping (e.g., OneCycleLR) if attribute present
+            if hasattr(self, 'scheduler') and getattr(self.scheduler, 'batch_step', False):
+                # Some schedulers (like OneCycleLR) use step() every batch
+                self.scheduler.step()
             # -----------------------------
             # Accumulate loss and calculate accuracy
             train_loss += loss.item()
@@ -57,8 +61,13 @@ class train_test_model:
             status = f"Train Loss={current_loss:.4f} Accuracy={current_accuracy:.2f}%"
             pbar.set_description(desc=status)
 
-        logging.info(f'Epoch {epoch:02d}/{self.epochs}: Train set final results: Average loss: {train_loss:.4f}, Accuracy: {correct}/{len(self.train_loader.dataset)} ({current_accuracy:.2f}%)')
-        return 100. * correct / len(self.train_loader.dataset)
+        # Final epoch-level logging for training metrics
+        epoch_accuracy = 100. * correct / len(self.train_loader.dataset)
+        logging.info(
+            f'Epoch {epoch:02d}/{self.epochs}: Train set final results: Average loss: {train_loss:.4f}, '
+            f'Accuracy: {correct}/{len(self.train_loader.dataset)} ({epoch_accuracy:.2f}%)'
+        )
+        return epoch_accuracy
 
     def test(self, model, device, test_loader, criterion,epoch):
         self.model.eval()
@@ -99,7 +108,16 @@ class train_test_model:
         for epoch in range(1, self.epochs+1):
             train_acc = self.do_training(epoch=epoch)
             test_acc = self.do_testing(epoch=epoch)
-            self.scheduler.step()
+            # Epoch-level scheduler step only if not using per-batch scheduler
+            if hasattr(self.scheduler, 'batch_step'):
+                if not getattr(self.scheduler, 'batch_step'):
+                    self.scheduler.step()
+            else:
+                # Backward compatibility for schedulers without batch_step attribute
+                try:
+                    self.scheduler.step()
+                except Exception:
+                    pass
             self.train_acc_list.append(train_acc)
             self.test_acc_list.append(test_acc)
             

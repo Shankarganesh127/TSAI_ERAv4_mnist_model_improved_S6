@@ -1,6 +1,6 @@
-2025-09-25 13:24:51,935 - INFO - Setting up for model version: 3
-2025-09-25 13:24:51,987 - INFO - Model v3 dataloader args: {'batch_size_train': 64, 'batch_size_test': 1000, 'shuffle_train': True, 'shuffle_test': False, 'train_transforms': Compose(
-    RandomRotation(degrees=[-5.0, 5.0], interpolation=nearest, expand=False, fill=(0,))
+2025-09-25 16:20:17,147 - INFO - Setting up for model version: 3
+2025-09-25 16:20:17,158 - INFO - Model v3 dataloader args: {'batch_size_train': 96, 'batch_size_test': 1000, 'shuffle_train': True, 'shuffle_test': False, 'train_transforms': Compose(
+    RandomRotation(degrees=[-7.0, 7.0], interpolation=nearest, expand=False, fill=(0,))
     RandomAffine(degrees=[0.0, 0.0], translate=(0.05, 0.05))
     ToTensor()
     Normalize(mean=(0.1307,), std=(0.3081,))
@@ -8,9 +8,9 @@
     ToTensor()
     Normalize(mean=(0.1307,), std=(0.3081,))
 )}
-2025-09-25 13:24:52,227 - INFO - Model v3 setup: Using SGD optimizer with lr=0.01, momentum=0.9, StepLR scheduler with step_size=4, gamma=0.1 for 15 epochs
-2025-09-25 13:24:52,228 - INFO - Dataloader arguments: {'batch_size_train': 64, 'batch_size_test': 1000, 'shuffle_train': True, 'shuffle_test': False, 'train_transforms': Compose(
-    RandomRotation(degrees=[-5.0, 5.0], interpolation=nearest, expand=False, fill=(0,))
+2025-09-25 16:20:17,304 - INFO - Model v3: OneCycleLR max_lr=0.05 epochs=15 pct_start=0.2 div_factor=10 final_div_factor=100
+2025-09-25 16:20:17,305 - INFO - Dataloader arguments: {'batch_size_train': 96, 'batch_size_test': 1000, 'shuffle_train': True, 'shuffle_test': False, 'train_transforms': Compose(
+    RandomRotation(degrees=[-7.0, 7.0], interpolation=nearest, expand=False, fill=(0,))
     RandomAffine(degrees=[0.0, 0.0], translate=(0.05, 0.05))
     ToTensor()
     Normalize(mean=(0.1307,), std=(0.3081,))
@@ -18,187 +18,74 @@
     ToTensor()
     Normalize(mean=(0.1307,), std=(0.3081,))
 )}
-2025-09-25 13:24:52,358 - INFO - 
+2025-09-25 16:20:17,305 - INFO - Dataloader arguments: {'batch_size_train': 96, 'batch_size_test': 1000, 'shuffle_train': True, 'shuffle_test': False, 'train_transforms': Compose(
+    RandomRotation(degrees=[-7.0, 7.0], interpolation=nearest, expand=False, fill=(0,))
+    RandomAffine(degrees=[0.0, 0.0], translate=(0.05, 0.05))
+    ToTensor()
+    Normalize(mean=(0.1307,), std=(0.3081,))
+), 'test_transforms': Compose(
+    ToTensor()
+    Normalize(mean=(0.1307,), std=(0.3081,))
+)}
+2025-09-25 16:20:17,351 - INFO - 
 ----------------------------------------------------------------
         Layer (type)               Output Shape         Param #
 ================================================================
-            Conv2d-1            [-1, 8, 28, 28]              72
-       BatchNorm2d-2            [-1, 8, 28, 28]              16
-              ReLU-3            [-1, 8, 28, 28]               0
-         Dropout2d-4            [-1, 8, 28, 28]               0
-            Conv2d-5           [-1, 10, 28, 28]             720
-       BatchNorm2d-6           [-1, 10, 28, 28]              20
-              ReLU-7           [-1, 10, 28, 28]               0
-         MaxPool2d-8           [-1, 10, 14, 14]               0
-            Conv2d-9           [-1, 10, 14, 14]             900
-      BatchNorm2d-10           [-1, 10, 14, 14]              20
-             ReLU-11           [-1, 10, 14, 14]               0
-        Dropout2d-12           [-1, 10, 14, 14]               0
-           Conv2d-13           [-1, 16, 14, 14]           1,440
-      BatchNorm2d-14           [-1, 16, 14, 14]              32
-             ReLU-15           [-1, 16, 14, 14]               0
-        MaxPool2d-16             [-1, 16, 7, 7]               0
-           Conv2d-17             [-1, 10, 7, 7]             160
-      BatchNorm2d-18             [-1, 10, 7, 7]              20
-             ReLU-19             [-1, 10, 7, 7]               0
-        Dropout2d-20             [-1, 10, 7, 7]               0
-           Conv2d-21             [-1, 16, 7, 7]           1,440
-      BatchNorm2d-22             [-1, 16, 7, 7]              32
-             ReLU-23             [-1, 16, 7, 7]               0
-           Conv2d-24             [-1, 10, 5, 5]           1,440
-      BatchNorm2d-25             [-1, 10, 5, 5]              20
-             ReLU-26             [-1, 10, 5, 5]               0
-        Dropout2d-27             [-1, 10, 5, 5]               0
-           Conv2d-28             [-1, 16, 3, 3]           1,440
-        AvgPool2d-29             [-1, 16, 1, 1]               0
-           Conv2d-30             [-1, 10, 1, 1]             160
+            Conv2d-1            [-1, 4, 28, 28]              36
+       BatchNorm2d-2            [-1, 4, 28, 28]               8
+              ReLU-3            [-1, 4, 28, 28]               0
+            Conv2d-4            [-1, 8, 28, 28]             288
+       BatchNorm2d-5            [-1, 8, 28, 28]              16
+              ReLU-6            [-1, 8, 28, 28]               0
+         MaxPool2d-7            [-1, 8, 14, 14]               0
+            Conv2d-8           [-1, 10, 14, 14]             720
+       BatchNorm2d-9           [-1, 10, 14, 14]              20
+             ReLU-10           [-1, 10, 14, 14]               0
+        Dropout2d-11           [-1, 10, 14, 14]               0
+           Conv2d-12           [-1, 12, 14, 14]           1,080
+      BatchNorm2d-13           [-1, 12, 14, 14]              24
+             ReLU-14           [-1, 12, 14, 14]               0
+        MaxPool2d-15             [-1, 12, 7, 7]               0
+           Conv2d-16              [-1, 8, 7, 7]              96
+      BatchNorm2d-17              [-1, 8, 7, 7]              16
+             ReLU-18              [-1, 8, 7, 7]               0
+           Conv2d-19             [-1, 12, 7, 7]             864
+      BatchNorm2d-20             [-1, 12, 7, 7]              24
+             ReLU-21             [-1, 12, 7, 7]               0
+           Conv2d-22             [-1, 10, 7, 7]             120
+      BatchNorm2d-23             [-1, 10, 7, 7]              20
+             ReLU-24             [-1, 10, 7, 7]               0
+           Conv2d-25             [-1, 10, 5, 5]             900
+        AvgPool2d-26             [-1, 10, 1, 1]               0
+          Flatten-27                   [-1, 10]               0
 ================================================================
-Total params: 7,932
-Trainable params: 7,932
+Total params: 4,232
+Trainable params: 4,232
 Non-trainable params: 0
 ----------------------------------------------------------------
 Input size (MB): 0.00
-Forward/backward pass size (MB): 0.57
-Params size (MB): 0.03
-Estimated Total Size (MB): 0.60
+Forward/backward pass size (MB): 0.38
+Params size (MB): 0.02
+Estimated Total Size (MB): 0.40
 ----------------------------------------------------------------
-2025-09-25 13:24:52,360 - INFO - Training model for 15 epochs
-2025-09-25 13:26:19,001 - INFO - Epoch 01/15: Train set final results: Average loss: 435.3312, Accuracy: 50977/60000 (84.96%)
-2025-09-25 13:26:31,160 - INFO - Epoch 01/15:Test set final results: Average loss: 0.0580, Accuracy: 9826/10000 (98.26%)
-2025-09-25 13:27:53,779 - INFO - Epoch 02/15: Train set final results: Average loss: 152.2145, Accuracy: 57040/60000 (95.07%)
-2025-09-25 13:28:06,179 - INFO - Epoch 02/15:Test set final results: Average loss: 0.0429, Accuracy: 9855/10000 (98.55%)
-2025-09-25 13:29:29,419 - INFO - Epoch 03/15: Train set final results: Average loss: 123.1108, Accuracy: 57623/60000 (96.04%)
-2025-09-25 13:29:41,187 - INFO - Epoch 03/15:Test set final results: Average loss: 0.0466, Accuracy: 9850/10000 (98.50%)
-2025-09-25 13:31:03,471 - INFO - Epoch 04/15: Train set final results: Average loss: 109.3181, Accuracy: 57874/60000 (96.46%)
-2025-09-25 13:31:15,365 - INFO - Epoch 04/15:Test set final results: Average loss: 0.0323, Accuracy: 9896/10000 (98.96%)
-2025-09-25 13:32:52,005 - INFO - Epoch 05/15: Train set final results: Average loss: 101.3624, Accuracy: 58096/60000 (96.83%)
-2025-09-25 13:33:11,033 - INFO - Epoch 05/15:Test set final results: Average loss: 0.0389, Accuracy: 9885/10000 (98.85%)
-2025-09-25 13:34:50,925 - INFO - Epoch 06/15: Train set final results: Average loss: 92.5025, Accuracy: 58233/60000 (97.06%)
-2025-09-25 13:35:10,726 - INFO - Epoch 06/15:Test set final results: Average loss: 0.0278, Accuracy: 9913/10000 (99.13%)
-2025-09-25 13:36:51,630 - INFO - Epoch 07/15: Train set final results: Average loss: 75.6081, Accuracy: 58537/60000 (97.56%)
-2025-09-25 13:37:12,334 - INFO - Epoch 07/15:Test set final results: Average loss: 0.0226, Accuracy: 9924/10000 (99.24%)
-2025-09-25 13:38:52,633 - INFO - Epoch 08/15: Train set final results: Average loss: 72.0720, Accuracy: 58594/60000 (97.66%)
-2025-09-25 13:39:15,217 - INFO - Epoch 08/15:Test set final results: Average loss: 0.0217, Accuracy: 9934/10000 (99.34%)
-2025-09-25 13:40:56,867 - INFO - Epoch 09/15: Train set final results: Average loss: 68.0432, Accuracy: 58666/60000 (97.78%)
-2025-09-25 13:41:17,327 - INFO - Epoch 09/15:Test set final results: Average loss: 0.0221, Accuracy: 9932/10000 (99.32%)
-2025-09-25 13:42:55,676 - INFO - Epoch 10/15: Train set final results: Average loss: 66.9408, Accuracy: 58715/60000 (97.86%)
-2025-09-25 13:43:14,772 - INFO - Epoch 10/15:Test set final results: Average loss: 0.0207, Accuracy: 9936/10000 (99.36%)
-2025-09-25 13:44:53,694 - INFO - Epoch 11/15: Train set final results: Average loss: 67.5509, Accuracy: 58740/60000 (97.90%)
-2025-09-25 13:45:12,976 - INFO - Epoch 11/15:Test set final results: Average loss: 0.0214, Accuracy: 9936/10000 (99.36%)
-2025-09-25 13:46:53,136 - INFO - Epoch 12/15: Train set final results: Average loss: 65.7158, Accuracy: 58741/60000 (97.90%)
-2025-09-25 13:47:13,640 - INFO - Epoch 12/15:Test set final results: Average loss: 0.0207, Accuracy: 9933/10000 (99.33%)
-2025-09-25 13:48:53,674 - INFO - Epoch 13/15: Train set final results: Average loss: 65.9816, Accuracy: 58690/60000 (97.82%)
-2025-09-25 13:49:12,439 - INFO - Epoch 13/15:Test set final results: Average loss: 0.0207, Accuracy: 9933/10000 (99.33%)
-2025-09-25 13:50:51,164 - INFO - Epoch 14/15: Train set final results: Average loss: 64.9658, Accuracy: 58735/60000 (97.89%)
-2025-09-25 13:51:11,256 - INFO - Epoch 14/15:Test set final results: Average loss: 0.0207, Accuracy: 9935/10000 (99.35%)
-2025-09-25 13:52:48,438 - INFO - Epoch 15/15: Train set final results: Average loss: 66.7769, Accuracy: 58699/60000 (97.83%)
-2025-09-25 13:53:07,186 - INFO - Epoch 15/15:Test set final results: Average loss: 0.0203, Accuracy: 9936/10000 (99.36%)
-2025-09-25 13:53:07,189 - INFO - --- Model Architecture Checks ---
-2025-09-25 13:53:07,189 - INFO - Total Parameters: 7,932
-2025-09-25 13:53:07,190 - INFO - Trainable Parameters: 7,932
-
-2025-09-25 13:53:07,190 - INFO - Layer-wise Parameter Details (in model order):
-2025-09-25 13:53:07,190 - INFO - ----------------------------------------------------------------------------------------------------
-2025-09-25 13:53:07,190 - INFO - 
-Block: input_conv (Sequential)
-2025-09-25 13:53:07,190 - INFO -   input_conv.0 (Conv2d)                              | Params:     72 | Convolution: 1->8 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,191 - INFO -   input_conv.1 (BatchNorm2d)                         | Params:     16 | BatchNorm: 8 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,191 - INFO -   input_conv.2 (ReLU)                                | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,191 - INFO -   input_conv.3 (Dropout2d)                           | Params:      0 | Dropout2d: probability 0.05
-2025-09-25 13:53:07,191 - INFO -   input_conv.4 (Conv2d)                              | Params:    720 | Convolution: 8->10 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,192 - INFO -   input_conv.5 (BatchNorm2d)                         | Params:     20 | BatchNorm: 10 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,192 - INFO -   input_conv.6 (ReLU)                                | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,192 - INFO -   input_conv.7 (MaxPool2d)                           | Params:      0 | MaxPool: kernel 2, stride 2, padding 0
-2025-09-25 13:53:07,192 - INFO - 
-Block: feature_block (Sequential)
-2025-09-25 13:53:07,192 - INFO -   feature_block.0 (Conv2d)                           | Params:    900 | Convolution: 10->10 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,192 - INFO -   feature_block.1 (BatchNorm2d)                      | Params:     20 | BatchNorm: 10 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,193 - INFO -   feature_block.2 (ReLU)                             | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,193 - INFO -   feature_block.3 (Dropout2d)                        | Params:      0 | Dropout2d: probability 0.05
-2025-09-25 13:53:07,193 - INFO -   feature_block.4 (Conv2d)                           | Params:  1,440 | Convolution: 10->16 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,193 - INFO -   feature_block.5 (BatchNorm2d)                      | Params:     32 | BatchNorm: 16 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,193 - INFO -   feature_block.6 (ReLU)                             | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,194 - INFO -   feature_block.7 (MaxPool2d)                        | Params:      0 | MaxPool: kernel 2, stride 2, padding 0
-2025-09-25 13:53:07,194 - INFO - 
-Block: pattern_block (Sequential)
-2025-09-25 13:53:07,194 - INFO -   pattern_block.0 (Conv2d)                           | Params:    160 | Convolution: 16->10 channels, kernel (1, 1), stride (1, 1), padding (0, 0), groups 1, bias False
-2025-09-25 13:53:07,194 - INFO -   pattern_block.1 (BatchNorm2d)                      | Params:     20 | BatchNorm: 10 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,194 - INFO -   pattern_block.2 (ReLU)                             | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,194 - INFO -   pattern_block.3 (Dropout2d)                        | Params:      0 | Dropout2d: probability 0.05
-2025-09-25 13:53:07,195 - INFO -   pattern_block.4 (Conv2d)                           | Params:  1,440 | Convolution: 10->16 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,195 - INFO -   pattern_block.5 (BatchNorm2d)                      | Params:     32 | BatchNorm: 16 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,195 - INFO -   pattern_block.6 (ReLU)                             | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,195 - INFO - 
-Block: classifier (Sequential)
-2025-09-25 13:53:07,196 - INFO -   classifier.0 (Conv2d)                              | Params:  1,440 | Convolution: 16->10 channels, kernel (3, 3), stride (1, 1), padding (0, 0), groups 1, bias False
-2025-09-25 13:53:07,196 - INFO -   classifier.1 (BatchNorm2d)                         | Params:     20 | BatchNorm: 10 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,197 - INFO -   classifier.2 (ReLU)                                | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,197 - INFO -   classifier.3 (Dropout2d)                           | Params:      0 | Dropout2d: probability 0.05
-2025-09-25 13:53:07,197 - INFO -   classifier.4 (Conv2d)                              | Params:  1,440 | Convolution: 10->16 channels, kernel (3, 3), stride (1, 1), padding (0, 0), groups 1, bias False
-2025-09-25 13:53:07,197 - INFO -   classifier.5 (AvgPool2d)                           | Params:      0 | AvgPool: kernel 3, stride 3, padding 0
-2025-09-25 13:53:07,198 - INFO -   classifier.6 (Conv2d)                              | Params:    160 | Convolution: 16->10 channels, kernel (1, 1), stride (1, 1), padding (0, 0), groups 1, bias False
-2025-09-25 13:53:07,198 - INFO - ----------------------------------------------------------------------------------------------------
-2025-09-25 13:53:07,198 - INFO - 
-Layer Type Summary:
-2025-09-25 13:53:07,199 - INFO - Conv2d               layers used:   9
-2025-09-25 13:53:07,199 - INFO - BatchNorm2d          layers used:   7
-2025-09-25 13:53:07,200 - INFO - ReLU                 layers used:   7
-2025-09-25 13:53:07,200 - INFO - MaxPool2d            layers used:   2
-2025-09-25 13:53:07,200 - INFO - AvgPool2d            layers used:   1
-2025-09-25 13:53:07,200 - INFO - Dropout2d            layers used:   4
-2025-09-25 13:53:07,200 - INFO - ----------------------------------------------------------------------------------------------------
-2025-09-25 13:53:07,201 - INFO - 
-2025-09-25 13:53:07,189 - INFO - --- Model Architecture Checks ---
-2025-09-25 13:53:07,189 - INFO - Total Parameters: 7,932
-2025-09-25 13:53:07,190 - INFO - Trainable Parameters: 7,932
-
-2025-09-25 13:53:07,190 - INFO - Layer-wise Parameter Details (in model order):
-2025-09-25 13:53:07,190 - INFO - ----------------------------------------------------------------------------------------------------
-2025-09-25 13:53:07,190 - INFO - 
-Block: input_conv (Sequential)
-2025-09-25 13:53:07,190 - INFO -   input_conv.0 (Conv2d)                              | Params:     72 | Convolution: 1->8 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,191 - INFO -   input_conv.1 (BatchNorm2d)                         | Params:     16 | BatchNorm: 8 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,191 - INFO -   input_conv.2 (ReLU)                                | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,191 - INFO -   input_conv.3 (Dropout2d)                           | Params:      0 | Dropout2d: probability 0.05
-2025-09-25 13:53:07,191 - INFO -   input_conv.4 (Conv2d)                              | Params:    720 | Convolution: 8->10 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,192 - INFO -   input_conv.5 (BatchNorm2d)                         | Params:     20 | BatchNorm: 10 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,192 - INFO -   input_conv.6 (ReLU)                                | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,192 - INFO -   input_conv.7 (MaxPool2d)                           | Params:      0 | MaxPool: kernel 2, stride 2, padding 0
-2025-09-25 13:53:07,192 - INFO - 
-Block: feature_block (Sequential)
-2025-09-25 13:53:07,192 - INFO -   feature_block.0 (Conv2d)                           | Params:    900 | Convolution: 10->10 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,192 - INFO -   feature_block.1 (BatchNorm2d)                      | Params:     20 | BatchNorm: 10 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,193 - INFO -   feature_block.2 (ReLU)                             | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,193 - INFO -   feature_block.3 (Dropout2d)                        | Params:      0 | Dropout2d: probability 0.05
-2025-09-25 13:53:07,193 - INFO -   feature_block.4 (Conv2d)                           | Params:  1,440 | Convolution: 10->16 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,193 - INFO -   feature_block.5 (BatchNorm2d)                      | Params:     32 | BatchNorm: 16 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,193 - INFO -   feature_block.6 (ReLU)                             | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,194 - INFO -   feature_block.7 (MaxPool2d)                        | Params:      0 | MaxPool: kernel 2, stride 2, padding 0
-2025-09-25 13:53:07,194 - INFO - 
-Block: pattern_block (Sequential)
-2025-09-25 13:53:07,194 - INFO -   pattern_block.0 (Conv2d)                           | Params:    160 | Convolution: 16->10 channels, kernel (1, 1), stride (1, 1), padding (0, 0), groups 1, bias False
-2025-09-25 13:53:07,194 - INFO -   pattern_block.1 (BatchNorm2d)                      | Params:     20 | BatchNorm: 10 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,194 - INFO -   pattern_block.2 (ReLU)                             | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,194 - INFO -   pattern_block.3 (Dropout2d)                        | Params:      0 | Dropout2d: probability 0.05
-2025-09-25 13:53:07,195 - INFO -   pattern_block.4 (Conv2d)                           | Params:  1,440 | Convolution: 10->16 channels, kernel (3, 3), stride (1, 1), padding (1, 1), groups 1, bias False
-2025-09-25 13:53:07,195 - INFO -   pattern_block.5 (BatchNorm2d)                      | Params:     32 | BatchNorm: 16 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,195 - INFO -   pattern_block.6 (ReLU)                             | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,195 - INFO - 
-Block: classifier (Sequential)
-2025-09-25 13:53:07,196 - INFO -   classifier.0 (Conv2d)                              | Params:  1,440 | Convolution: 16->10 channels, kernel (3, 3), stride (1, 1), padding (0, 0), groups 1, bias False
-2025-09-25 13:53:07,196 - INFO -   classifier.1 (BatchNorm2d)                         | Params:     20 | BatchNorm: 10 features, eps=1e-05, momentum=0.1
-2025-09-25 13:53:07,197 - INFO -   classifier.2 (ReLU)                                | Params:      0 | Activation: ReLU
-2025-09-25 13:53:07,197 - INFO -   classifier.3 (Dropout2d)                           | Params:      0 | Dropout2d: probability 0.05
-2025-09-25 13:53:07,197 - INFO -   classifier.4 (Conv2d)                              | Params:  1,440 | Convolution: 10->16 channels, kernel (3, 3), stride (1, 1), padding (0, 0), groups 1, bias False
-2025-09-25 13:53:07,197 - INFO -   classifier.5 (AvgPool2d)                           | Params:      0 | AvgPool: kernel 3, stride 3, padding 0
-2025-09-25 13:53:07,198 - INFO -   classifier.6 (Conv2d)                              | Params:    160 | Convolution: 16->10 channels, kernel (1, 1), stride (1, 1), padding (0, 0), groups 1, bias False
-2025-09-25 13:53:07,198 - INFO - ----------------------------------------------------------------------------------------------------
-2025-09-25 13:53:07,198 - INFO - 
-Layer Type Summary:
-2025-09-25 13:53:07,199 - INFO - Conv2d               layers used:   9
-2025-09-25 13:53:07,199 - INFO - BatchNorm2d          layers used:   7
-2025-09-25 13:53:07,200 - INFO - ReLU                 layers used:   7
-2025-09-25 13:53:07,200 - INFO - MaxPool2d            layers used:   2
-2025-09-25 13:53:07,200 - INFO - AvgPool2d            layers used:   1
-2025-09-25 13:53:07,200 - INFO - Dropout2d            layers used:   4
-2025-09-25 13:53:07,200 - INFO - ----------------------------------------------------------------------------------------------------
+2025-09-25 16:20:17,352 - INFO - Training model for 15 epochs
+2025-09-25 16:21:23,280 - INFO - Epoch 01/15: Train set final results: Average loss: 434.5888, Accuracy: 46670/60000 (77.78%)
+2025-09-25 16:21:34,917 - INFO - Epoch 01/15:Test set final results: Average loss: 0.1392, Accuracy: 9623/10000 (96.23%)
+2025-09-25 16:22:37,378 - INFO - Epoch 02/15: Train set final results: Average loss: 109.6806, Accuracy: 56947/60000 (94.91%)
+2025-09-25 16:22:49,183 - INFO - Epoch 02/15:Test set final results: Average loss: 0.0865, Accuracy: 9727/10000 (97.27%)
+2025-09-25 16:23:51,758 - INFO - Epoch 03/15: Train set final results: Average loss: 81.8388, Accuracy: 57646/60000 (96.08%)
+2025-09-25 16:24:03,474 - INFO - Epoch 03/15:Test set final results: Average loss: 0.0654, Accuracy: 9795/10000 (97.95%)
+2025-09-25 16:25:05,674 - INFO - Epoch 04/15: Train set final results: Average loss: 70.2680, Accuracy: 57978/60000 (96.63%)
+2025-09-25 16:25:17,593 - INFO - Epoch 04/15:Test set final results: Average loss: 0.0568, Accuracy: 9822/10000 (98.22%)
+2025-09-25 16:26:22,598 - INFO - Epoch 05/15: Train set final results: Average loss: 63.4655, Accuracy: 58175/60000 (96.96%)
+2025-09-25 16:26:34,156 - INFO - Epoch 05/15:Test set final results: Average loss: 0.0544, Accuracy: 9834/10000 (98.34%)
+2025-09-25 16:27:35,459 - INFO - Epoch 06/15: Train set final results: Average loss: 59.4641, Accuracy: 58267/60000 (97.11%)
+2025-09-25 16:27:46,965 - INFO - Epoch 06/15:Test set final results: Average loss: 0.0521, Accuracy: 9837/10000 (98.37%)
+2025-09-25 16:28:48,151 - INFO - Epoch 07/15: Train set final results: Average loss: 52.9458, Accuracy: 58403/60000 (97.34%)
+2025-09-25 16:29:00,694 - INFO - Epoch 07/15:Test set final results: Average loss: 0.0422, Accuracy: 9872/10000 (98.72%)
+2025-09-25 16:30:09,059 - INFO - Epoch 08/15: Train set final results: Average loss: 49.6578, Accuracy: 58535/60000 (97.56%)
+2025-09-25 16:30:21,211 - INFO - Epoch 08/15:Test set final results: Average loss: 0.0444, Accuracy: 9854/10000 (98.54%)
+2025-09-25 16:31:25,386 - INFO - Epoch 09/15: Train set final results: Average loss: 48.2953, Accuracy: 58584/60000 (97.64%)
+2025-09-25 16:31:38,301 - INFO - Epoch 09/15:Test set final results: Average loss: 0.0345, Accuracy: 9888/10000 (98.88%)
+2025-09-25 16:32:39,303 - INFO - Epoch 10/15: Train set final results: Average loss: 45.6347, Accuracy: 58610/60000 (97.68%)
+2025-09-25 16:32:52,614 - INFO - Epoch 10/15:Test set final results: Average loss: 0.0443, Accuracy: 9858/10000 (98.58%)

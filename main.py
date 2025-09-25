@@ -47,7 +47,7 @@ class get_model:
             raise ValueError(f"Unknown model version: {model_version}")
         return config.setup(self.model_obj)
 
-def main_i(i):
+def main_i(i, params_check=1):
     logging.info(f"Setting up for model version: {i}")
     model = get_model(model_version=i)
     # Capture printed summary into logs
@@ -64,7 +64,10 @@ def main_i(i):
                                                       model.model_config.optimizer,
                                                       model.model_config.scheduler,
                                                       model.model_config.epochs)
-    train_test_instance.run_epoch()
+    if (params_check == 0):
+        train_test_instance.run_epoch()
+    else:
+        pass
     #train_test_instance.plot_results()
     # Capture printed model checks into logs
     with io.StringIO() as buf, contextlib.redirect_stdout(buf):
@@ -77,11 +80,12 @@ def main():
     # Initialize logging only in the main process
     setup_logging(log_to_file=True)
     set_versions = input("Enter model versions or leave blank for all versions one by one: ")
+    params_check = int(input("Enter 1 for params check only, 0 for full training/testing: "))
     if set_versions == "":
         for model_version in range(4): 
-            main_i(model_version)
+            main_i(model_version, params_check=params_check)
     else:
-        main_i(int(set_versions))
+        main_i(int(set_versions), params_check=params_check)
 
 if __name__ == "__main__":
     main()
