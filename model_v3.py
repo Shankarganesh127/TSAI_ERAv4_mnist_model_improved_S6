@@ -15,6 +15,7 @@ class Net(nn.Module):
             nn.Conv2d(1, 8, 3, padding=1, bias=False),  # -> 8x28x28
             nn.BatchNorm2d(8),
             nn.ReLU(),
+            nn.Dropout2d(0.05),
             nn.Conv2d(8, 10, 3, padding=1, bias=False),  # -> 10x28x28
             nn.BatchNorm2d(10),
             nn.ReLU(),
@@ -38,6 +39,7 @@ class Net(nn.Module):
             nn.Conv2d(16, 10, 1, bias=False),  # -> 8x7x7 (dimensionality reduction)
             nn.BatchNorm2d(10),
             nn.ReLU(),
+            nn.Dropout2d(0.05),
             nn.Conv2d(10, 16, 3, padding=1, bias=False),  # -> 16x7x7
             nn.BatchNorm2d(16),
             nn.ReLU(),
@@ -48,6 +50,7 @@ class Net(nn.Module):
             nn.Conv2d(16, 10, 3, bias=False),  # -> 10x5x5
             nn.BatchNorm2d(10),
             nn.ReLU(),
+            nn.Dropout2d(0.05),
             nn.Conv2d(10, 16, 3, bias=False),  # -> 16x3x3
             nn.AvgPool2d(kernel_size=3),  # -> 16x1x1
             nn.Conv2d(16, 10, 1, bias=False),  # -> 16x1x1
@@ -77,8 +80,8 @@ class set_config_v3:
         self.test_transforms = self.get_test_transforms()
         
     def setup(self, model):
-        self.optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
-        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=4, gamma=0.1)
+        self.optimizer = torch.optim.SGD(model.parameters(), lr=0.01, momentum=0.9, weight_decay=5e-4)
+        self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=6, gamma=0.1)
         self.device = next(model.parameters()).device  # Get device from model
         self.dataloader_args = self.get_dataloader_args()
         self.data_setup_instance = DataSetup(**self.dataloader_args)
@@ -89,18 +92,18 @@ class set_config_v3:
     def get_dataloader_args(self):
         data_loaders_args = {}
         if hasattr(self, 'device') and self.device.type == "cuda":
-            data_loaders_args = dict(batch_size_train=32, batch_size_test=1000, shuffle_train=True, shuffle_test=False, 
+            data_loaders_args = dict(batch_size_train=64, batch_size_test=1000, shuffle_train=True, shuffle_test=False, 
                                    num_workers=2, pin_memory=True, train_transforms=self.train_transforms, test_transforms=self.test_transforms)
         else:
-            data_loaders_args = dict(batch_size_train=32, batch_size_test=1000, shuffle_train=True, shuffle_test=False, 
+            data_loaders_args = dict(batch_size_train=64, batch_size_test=1000, shuffle_train=True, shuffle_test=False, 
                                    train_transforms=self.train_transforms, test_transforms=self.test_transforms)
         logging.info(f"Model v3 dataloader args: {data_loaders_args}")
         return data_loaders_args
         
     def get_train_transforms(self):
         train_transforms = transforms.Compose([
-            transforms.RandomRotation((-7.0, 7.0), fill=(0,)),
-            transforms.RandomAffine(0, translate=(0.08, 0.08)),
+            transforms.RandomRotation((-5.0, 5.0), fill=(0,)),
+            transforms.RandomAffine(0, translate=(0.05, 0.05)),
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))
             ])
