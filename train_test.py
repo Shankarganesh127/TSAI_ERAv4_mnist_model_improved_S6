@@ -2,7 +2,6 @@
 # train_test.py
 from tqdm import tqdm
 import torch
-import torch.optim as optim
 import matplotlib.pyplot as plt
 import torch.nn.functional as F
 import logging
@@ -40,10 +39,11 @@ class train_test_model:
             loss = self.F.nll_loss(output, target)
             # Backpropagation
             loss.backward()
+            # Gradient clipping to stabilize higher LR OneCycle swings
+            torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm=2.0)
             self.optimizer.step()
             # Per-batch scheduler stepping (e.g., OneCycleLR) if attribute present
             if hasattr(self, 'scheduler') and getattr(self.scheduler, 'batch_step', False):
-                # Some schedulers (like OneCycleLR) use step() every batch
                 self.scheduler.step()
             # -----------------------------
             # Accumulate loss and calculate accuracy
@@ -57,8 +57,12 @@ class train_test_model:
             current_loss = train_loss / processed
             current_accuracy = 100. * correct / processed
             
-            # Update progress bar only
-            status = f"Train Loss={current_loss:.4f} Accuracy={current_accuracy:.2f}%"
+            # Update progress bar only (add LR peek occasionally)
+            if hasattr(self, 'scheduler') and getattr(self.scheduler, 'batch_step', False):
+                current_lr = self.scheduler.get_last_lr()[0]
+                status = f"Train Loss={current_loss:.4f} Acc={current_accuracy:.2f}% LR={current_lr:.4f}"
+            else:
+                status = f"Train Loss={current_loss:.4f} Accuracy={current_accuracy:.2f}%"
             pbar.set_description(desc=status)
 
         # Final epoch-level logging for training metrics
@@ -109,11 +113,10 @@ class train_test_model:
             train_acc = self.do_training(epoch=epoch)
             test_acc = self.do_testing(epoch=epoch)
             # Epoch-level scheduler step only if not using per-batch scheduler
-            if hasattr(self.scheduler, 'batch_step'):
-                if not getattr(self.scheduler, 'batch_step'):
-                    self.scheduler.step()
-            else:
-                # Backward compatibility for schedulers without batch_step attribute
+            if hasattr(self.scheduler, 'batch_step') and not getattr(self.scheduler, 'batch_step'):
+                self.scheduler.step()
+            elif not hasattr(self.scheduler, 'batch_step'):
+                # Legacy schedulers
                 try:
                     self.scheduler.step()
                 except Exception:

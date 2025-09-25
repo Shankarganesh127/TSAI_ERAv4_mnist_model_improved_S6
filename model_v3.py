@@ -26,23 +26,23 @@ class Net(nn.Module):
             nn.BatchNorm2d(10),
             nn.ReLU(),
             #nn.Dropout2d(0.01),  # reduced dropout to improve train fit (no param change)
-            nn.Conv2d(10, 12, 3, padding=1, bias=False),
-            nn.BatchNorm2d(12),
+            nn.Conv2d(10, 16, 3, padding=1, bias=False),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
             nn.MaxPool2d(2, 2)
         )
 
         self.pattern_block = nn.Sequential(
-            nn.Conv2d(12, 8, 1, bias=False),
+            nn.Conv2d(16, 8, 1, bias=False),
             nn.BatchNorm2d(8),
             nn.ReLU(),
-            nn.Conv2d(8, 12, 3, padding=1, bias=False),
-            nn.BatchNorm2d(12),
+            nn.Conv2d(8, 16, 3, padding=1, bias=False),
+            nn.BatchNorm2d(16),
             nn.ReLU(),
         )
 
         self.classifier = nn.Sequential(
-            nn.Conv2d(12, 10, 1, bias=False),
+            nn.Conv2d(16, 10, 1, bias=False),
             nn.BatchNorm2d(10),
             nn.ReLU(),
             nn.Conv2d(10, 10, 3, bias=False),
@@ -69,7 +69,7 @@ class set_config_v3:
     def setup(self, model, use_onecycle: bool = True):
         # Keep same model params; only training dynamics altered
         self.use_onecycle = use_onecycle
-        base_lr = 0.05
+        base_lr = 0.065  # slightly higher for faster fit on small model
         self.optimizer = torch.optim.SGD(model.parameters(), lr=base_lr, momentum=0.9)
         self.device = next(model.parameters()).device
         self.dataloader_args = self.get_dataloader_args()
@@ -81,42 +81,42 @@ class set_config_v3:
                 max_lr=base_lr,
                 epochs=self.epochs,
                 steps_per_epoch=steps_per_epoch,
-                pct_start=0.2,
-                div_factor=10,
+                pct_start=0.1,   # earlier peak
+                div_factor=5,    # higher initial LR than before
                 final_div_factor=100,
                 anneal_strategy='cos'
             )
-            self.scheduler_batch_step = True
+            # mark scheduler for per-batch stepping
+            self.scheduler.batch_step = True
             logging.getLogger().info(
-                f"Model v3: OneCycleLR max_lr={base_lr} epochs={self.epochs} pct_start=0.2 div_factor=10 final_div_factor=100"
+                f"Model v3: OneCycleLR max_lr={base_lr} pct_start=0.1 div_factor=5 final_div_factor=100 epochs={self.epochs}"
             )
         else:
             # Fallback StepLR (delayed decay)
             self.scheduler = torch.optim.lr_scheduler.StepLR(self.optimizer, step_size=8, gamma=0.1)
-            self.scheduler_batch_step = False
+            self.scheduler.batch_step = False
             logging.getLogger().info(
                 f"Model v3: StepLR lr={base_lr} step_size=8 gamma=0.1"
             )
         logging.getLogger().info(f"Dataloader arguments: {self.dataloader_args}")
-        logging.getLogger().info(f"Dataloader arguments: {self.dataloader_args}")
         return self
 
     def get_dataloader_args(self):
-        # Slightly smaller batch gives more update steps → better fit early
+        # Reduce batch to 64 for more updates/epoch and slightly noisier grads (better fit)
         if hasattr(self, 'device') and self.device.type == "cuda":
-            args = dict(batch_size_train=96, batch_size_test=1000, shuffle_train=True, shuffle_test=False,
+            args = dict(batch_size_train=64, batch_size_test=1000, shuffle_train=True, shuffle_test=False,
                         num_workers=2, pin_memory=True, train_transforms=self.train_transforms, test_transforms=self.test_transforms)
         else:
-            args = dict(batch_size_train=96, batch_size_test=1000, shuffle_train=True, shuffle_test=False,
+            args = dict(batch_size_train=64, batch_size_test=1000, shuffle_train=True, shuffle_test=False,
                         train_transforms=self.train_transforms, test_transforms=self.test_transforms)
         logging.info(f"Model v3 dataloader args: {args}")
         return args
 
     def get_train_transforms(self):
-        # Lighten augmentation further for higher train accuracy while retaining some generalization
+        # Further lighten augmentations to reduce underfitting pressure
         return transforms.Compose([
-            transforms.RandomRotation((-7.0, 7.0), fill=(0,)),
-            transforms.RandomAffine(0, translate=(0.05, 0.05)),
+            transforms.RandomRotation((-5.0, 5.0), fill=(0,)),
+            transforms.RandomAffine(0, translate=(0.03, 0.03)),
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,))
         ])
