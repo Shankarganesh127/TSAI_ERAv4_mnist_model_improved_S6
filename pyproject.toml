@@ -4,4 +4,11 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["torch","torchsummary","torchvision","matplotlib","tqdm"]
+dependencies = [
+    "torch",
+    "torchsummary",
+    "torchvision",
+    "matplotlib",
+    "tqdm",
+    "psutil"
+]

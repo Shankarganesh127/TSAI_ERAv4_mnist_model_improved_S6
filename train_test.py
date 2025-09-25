@@ -4,35 +4,32 @@ from tqdm import tqdm
 import torch
 import torch.optim as optim
 import matplotlib.pyplot as plt
+import torch.nn.functional as F
+import logging
 
 
 class train_test_model:
     
-    def __init__(self, model, device, train_loader, test_loader):
+    def __init__(self, model, device, train_loader, test_loader,criterion,optimizer,scheduler,epochs=1):
         self.model = model
         self.device = device
         self.train_loader = train_loader
         self.test_loader = test_loader
-        self.criterion = self.set_criterion()
-        self.optimizer = self.set_optimizer()
-        self.scheduler = self.set_scheduler()
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.scheduler = scheduler
         self.train_acc_list = []
         self.test_acc_list = []
+        self.F = F  # Assign torch.nn.functional to self.F for easier access
+        self.epochs = epochs
 
-    def set_criterion(self):
-        return torch.nn.NLLLoss()
-
-    def set_optimizer(self):
-        return optim.SGD(self.model.parameters(), lr=0.05, momentum=0.9)
-
-    def set_scheduler(self):
-        return optim.lr_scheduler.StepLR(self.optimizer, step_size=6, gamma=0.1)
-
-    def train(self, model, device, train_loader, optimizer, criterion):
+    def train(self, model, device, train_loader, optimizer, criterion,epoch):
         self.model.train()
-        pbar = tqdm(self.train_loader)
+        pbar = tqdm(self.train_loader, desc="Training", leave=True)
         train_loss, correct, processed = 0, 0, 0
-        for data, target in pbar:
+        # Train with progress bar
+        
+        for batch_idx, (data, target) in enumerate(pbar, 1):
             # get samples and move to device
             data, target = data.to(self.device), target.to(self.device)
             # Initialize optimizer
@@ -40,7 +37,7 @@ class train_test_model:
             # Prediction
             output = self.model(data)
             # Calculate loss
-            loss = self.criterion(output, target)
+            loss = self.F.nll_loss(output, target)
             # Backpropagation
             loss.backward()
             self.optimizer.step()
@@ -48,43 +45,65 @@ class train_test_model:
             # Accumulate loss and calculate accuracy
             train_loss += loss.item()
             pred = output.argmax(dim=1, keepdim=True)
-            correct += pred.eq(target.view_as(pred)).sum().item()
+            batch_correct = pred.eq(target.view_as(pred)).sum().item()
+            correct += batch_correct
             processed += len(data)
             
-            # Update progress bar with current statistics
-            pbar.set_description(desc=f"Train Loss={train_loss / processed:.4f} Accuracy={100. * correct / processed:.2f}")
+            # Calculate current metrics
+            current_loss = train_loss / processed
+            current_accuracy = 100. * correct / processed
+            
+            # Update progress bar only
+            status = f"Train Loss={current_loss:.4f} Accuracy={current_accuracy:.2f}%"
+            pbar.set_description(desc=status)
 
+        logging.info(f'Epoch {epoch:02d}/{self.epochs}: Train set final results: Average loss: {train_loss:.4f}, Accuracy: {correct}/{len(self.train_loader.dataset)} ({current_accuracy:.2f}%)')
         return 100. * correct / len(self.train_loader.dataset)
 
-    def test(self, model, device, test_loader, criterion):
+    def test(self, model, device, test_loader, criterion,epoch):
         self.model.eval()
         test_loss, correct = 0, 0
+        # Test with progress bar
+        
         with torch.no_grad():
-            for data, target in self.test_loader:
+            pbar = tqdm(self.test_loader, desc="Testing", leave=True)
+            for batch_idx, (data, target) in enumerate(pbar, 1):
                 data, target = data.to(self.device), target.to(self.device)
                 output = self.model(data)
-                test_loss += self.criterion(output, target).item()
+                test_loss += self.F.nll_loss(output, target, reduction='sum').item()
                 pred = output.argmax(dim=1, keepdim=True)
-                correct += pred.eq(target.view_as(pred)).sum().item()
+                batch_correct = pred.eq(target.view_as(pred)).sum().item()
+                correct += batch_correct
+                
+                # Calculate current metrics
+                current_loss = test_loss / (batch_idx * len(data))
+                current_accuracy = 100. * correct / (batch_idx * len(data))
+                
+                # Update progress bar only
+                status = f"Test Loss={current_loss:.4f} Accuracy={current_accuracy:.2f}%"
+                pbar.set_description(desc=status)
+                
         test_loss /= len(self.test_loader.dataset)
         acc = 100. * correct / len(self.test_loader.dataset)
-        print(f'\nTest set: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(self.test_loader.dataset)} ({acc:.2f}%)\n')
+        logging.info(f'Epoch {epoch:02d}/{self.epochs}:Test set final results: Average loss: {test_loss:.4f}, Accuracy: {correct}/{len(self.test_loader.dataset)} ({acc:.2f}%)')
         return acc
 
-    def do_training(self):
-        return self.train(self.model, self.device, self.train_loader, self.optimizer, self.criterion)
+    def do_training(self,epoch):
+        return self.train(self.model, self.device, self.train_loader, self.optimizer, self.criterion,epoch)
 
-    def do_testing(self):
-        return self.test(self.model, self.device, self.test_loader, self.criterion)
-    
-    def run_epoch(self, epochs=1):
-        for epoch in range(1, epochs+1):
-            print(f"Epoch {epoch}")
-            train_acc = self.do_training()
-            test_acc = self.do_testing()
+    def do_testing(self,epoch):
+        return self.test(self.model, self.device, self.test_loader, self.criterion,epoch)
+
+    def run_epoch(self):
+        logging.info(f"Training model for {self.epochs} epochs")
+        for epoch in range(1, self.epochs+1):
+            train_acc = self.do_training(epoch=epoch)
+            test_acc = self.do_testing(epoch=epoch)
             self.scheduler.step()
             self.train_acc_list.append(train_acc)
             self.test_acc_list.append(test_acc)
+            
+            #logging.info(f"Epoch {epoch:02d}/{self.epochs}: Train={train_acc:.2f}%, Test={test_acc:.2f}%, LR={self.scheduler.get_last_lr()[0]:.6f}")
             
     def plot_results(self):
         plt.plot(self.train_acc_list, label='Train Acc')

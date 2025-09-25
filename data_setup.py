@@ -4,16 +4,18 @@ import torch.utils as utils
 from torchvision import datasets, transforms
 
 class DataSetup:
-    def __init__(self, batch_size_train=64, batch_size_test=1000, shuffle_train=True, shuffle_test=False, num_workers=2, pin_memory=None):
+    def __init__(self, batch_size_train=64, batch_size_test=1000, shuffle_train=True, shuffle_test=False, num_workers=2, pin_memory=None, train_transforms=None, test_transforms=None):
         self.batch_size_train = batch_size_train
         self.batch_size_test = batch_size_test
         self.shuffle_train = shuffle_train
         self.shuffle_test = shuffle_test
         self.num_workers = num_workers
         self.pin_memory = pin_memory
+        self.train_transforms = train_transforms if train_transforms else self.get_train_transforms()
+        self.test_transforms = test_transforms if test_transforms else self.get_test_transforms()
         self.train_loader = self.get_train_loader()
         self.test_loader = self.get_test_loader()
-    
+
     def get_train_transforms(self):
         train_transforms = transforms.Compose([
             transforms.RandomRotation((-15.0, 15.0), fill=(0,)),
