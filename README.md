@@ -1,634 +1,403 @@
-# 🧠 Lightweight MNIST CNN Models: model_v0.py vs model_v1.py
+## 📘 Model Progression & Evaluation Report
 
-This project implements and compares two compact Convolutional Neural Networks (CNNs) for the MNIST handwritten digits dataset. Both models are designed to be highly parameter-efficient while achieving >99.4% accuracy.
+This document presents a clear, progressive narrative of three MNIST CNN model versions (`model_v1.py`, `model_v2.py`, `model_v3.py`). Each iteration pursued explicit Targets, delivered measurable Results, and produced actionable Analysis to guide the next step.
 
----
-
-## 🚀 Model Highlights
-
-| Model      | Parameters | Test Accuracy (15 epochs) | Key Features |
-|------------|------------|--------------------------|--------------|
-| model_v0.py| 18,214     | 99.44%                   | GAP, FC, BatchNorm, MaxPool |
-| model_v1.py| 10,970     | 99.40%                   | Deeper, Dropout, Fewer Params |
+> All metrics below are extracted from training logs in `logs/training_v*.log` (15 epochs each). Best accuracies are taken as the maximum value observed across epochs. Where earlier draft notes differed, the values here reflect the actual logged results.
 
 ---
 
-## 🏗️ Model Architectures
+### 🔍 Quick Comparison
 
-### model_v0.py
-- **Structure:** 3 convolutional blocks (channels: 4→8→16→32→40), each with BatchNorm and ReLU, MaxPooling after each block, ends with Global Average Pooling and a fully connected layer.
-- **Output:** Uses `F.log_softmax` for NLLLoss.
-- **Parameters:** ~18,214.
+| Feature | Model v1 | Model v2 | Model v3 |
+|---------|----------|----------|----------|
+| Total Parameters | 10,970 | 4,232 | 4,968 |
+| Best Train Accuracy | 98.20% (Ep15) | 98.21% (Ep15) | 98.75% (Ep15) |
+| Best Test Accuracy | 99.35% (Ep11) | 99.08% (Ep14/15) | 99.45% (Ep14) |
+| Scheduler | StepLR | StepLR | OneCycleLR (per-batch) |
+| Batch Size (train/test) | 128 / 1000 | 128 / 1000 | 64 / 1000 |
+| Augmentation | ±15° rot + 0.1 shift | Same as v1 | ±5° rot + 0.03 shift |
+| Regularization | Dropout2d (2×) | Dropout2d (1×) | (No dropout) |
+| Architectural Theme | Deeper, wide mid-blocks | Parameter minimization | Same depth, widened selective channels |
 
-<details>
-<summary>Click to expand model_v0.py architecture</summary>
+---
+
+## 🧪 Version Details
+
+### 1️⃣ Model v1 – Baseline Structured CNN
+**Targets**
+1. Establish a clean modular convolutional backbone.
+2. Keep parameters reasonably low (< 12K) while achieving ≥99.3% test accuracy.
+3. Integrate logging, augmentation, and stable scheduling (StepLR).
+
+**Results**
+- Parameters: 10,970
+- Best Test Accuracy: 99.35% (Epoch 11)
+- Best Train Accuracy: 98.20% (Epoch 15)
+- Gap (best test − best train epoch 11 vs 15 high): Test slightly higher than train mid-run (healthy generalization)
+
+**Analysis**
+- The model underfits slightly (train never exceeds ~98.2%) indicating headroom for optimization.
+- Two dropout placements plus relatively strong augmentation slow convergence but support generalization.
+- StepLR (step=6, gamma=0.1) causes a noticeable stabilization after epoch 6; further gains plateau after epoch 11.
+- Serves as a strong reference for pareto trade-offs (accuracy vs capacity).
+
+**Key Architectural Notes**
+- Multi-stage conv “tower” with reduction to 1×1 via a 7×7 kernel late.
+- Use of 1×1 + 3×3 transitions (implicit bottlenecking) not yet exploited aggressively.
+
+---
+
+### 2️⃣ Model v2 – Parameter Efficiency Focus
+**Targets**
+1. Reduce parameter count by >50% vs v1 while retaining ≥99.0% test accuracy.
+2. Preserve training stability with minimal architectural complexity.
+3. Keep the same optimizer & scheduler for controlled comparison.
+
+**Results**
+- Parameters: 4,232 (−61.4% vs v1)
+- Best Test Accuracy: 99.08% (Epochs 14 & 15)
+- Best Train Accuracy: 98.21% (Epoch 15)
+- Efficiency: 23.41 test-accuracy-per-kiloparam (99.08 / 4.232)
+
+**Analysis**
+- Massive compression with only a 0.27 pp absolute drop from v1’s best test performance.
+- Train/test curves remain tightly coupled → model is capacity-limited but not overfitting.
+- Late-epoch test improvements (99.04 → 99.08) suggest scheduler annealing still effective.
+- This version establishes the “lean backbone” used as a base for performance-tuned variants.
+
+**Key Architectural Changes vs v1**
+- Channel widths reduced throughout (peaks at 12 vs 20 in v1 mid-blocks).
+- Added final AvgPool2d + Flatten classification head.
+- Single dropout retained early; later dropout removed for efficiency.
+
+---
+
+### 3️⃣ Model v3 – Training Dynamics Optimization
+**Targets**
+1. Improve test accuracy toward ≥99.4% without a large parameter jump.
+2. Accelerate convergence via a modern LR schedule (OneCycleLR).
+3. Reduce augmentation intensity to enhance feature fidelity for a small model.
+4. Introduce gradient stability (clipping) & per-batch LR stepping visibility.
+
+**Results**
+- Parameters: 4,968 (+17.4% vs v2; still <50% of v1)
+- Best Test Accuracy: 99.45% (Epoch 14)
+- Best Train Accuracy: 98.75% (Epoch 15)
+- Efficiency: 20.02 test-accuracy-per-kiloparam (slightly lower than v2 due to added channels)
+- OneCycleLR Config: max_lr=0.065, pct_start=0.1, div_factor=5, final_div_factor=100 (per-batch stepping)
+
+**Analysis**
+- OneCycleLR + milder augmentation unlocked additional performance without overfitting (test still leads train mid-to-late epochs).
+- Parameter increase (selective widening) contributed modest capacity gains; could be rolled back if strict parity with v2 is required.
+- Gradient clipping (norm=2) likely helped stabilization at higher early-phase LR.
+- Further headroom may require label smoothing or stochastic weight averaging rather than widening.
+
+**Key Training Enhancements vs v2**
+- Per-batch LR logging (diagnostic transparency).
+- Lighter transforms (±5° / 0.03 shift) to reduce excessive deformation noise.
+- Removed dropout to let added channels express capacity.
+
+---
+
+## 📊 Epoch-by-Epoch Accuracy
+
+| Epoch | v1 Train | v1 Test | v2 Train | v2 Test | v3 Train | v3 Test |
+|-------|----------|---------|----------|---------|----------|---------|
+| 01 | 89.72% | 98.16% | 85.78% | 96.94% | 88.84% | 97.56% |
+| 02 | 95.69% | 97.90% | 95.65% | 97.10% | 96.29% | 97.76% |
+| 03 | 96.28% | 98.48% | 96.47% | 97.79% | 97.00% | 97.96% |
+| 04 | 96.70% | 99.05% | 96.98% | 98.04% | 97.42% | 98.58% |
+| 05 | 97.05% | 98.90% | 97.25% | 98.47% | 97.71% | 98.78% |
+| 06 | 97.19% | 98.96% | 97.28% | 98.78% | 97.81% | 98.67% |
+| 07 | 97.73% | 99.26% | 97.87% | 98.98% | 97.93% | 98.71% |
+| 08 | 97.99% | 99.30% | 98.08% | 99.01% | 98.18% | 98.99% |
+| 09 | 97.98% | 99.34% | 98.08% | 99.00% | 98.23% | 99.13% |
+| 10 | 98.03% | 99.33% | 98.15% | 99.02% | 98.34% | 99.05% |
+| 11 | 98.13% | 99.35% | 98.16% | 99.04% | 98.42% | 99.09% |
+| 12 | 98.05% | 99.24% | 98.15% | 99.03% | 98.57% | 99.33% |
+| 13 | 98.12% | 99.24% | 98.21% | 99.04% | 98.71% | 99.42% |
+| 14 | 98.07% | 99.30% | 98.17% | 99.08% | 98.71% | 99.45% |
+| 15 | 98.20% | 99.31% | 98.21% | 99.08% | 98.75% | 99.42% |
+
+> Bold best per column (Summary): v1 test 99.35% (Ep11), v2 test 99.08% (Ep14/15), v3 test 99.45% (Ep14).
+
+---
+
+## 📐 Parameter Efficiency
+
+| Model | Params | Best Test Acc | Acc / 1K Params |
+|-------|--------|---------------|-----------------|
+| v1 | 10,970 | 99.35% | 9.06 |
+| v2 | 4,232 | 99.08% | 23.41 |
+| v3 | 4,968 | 99.45% | 20.02 |
+
+Observation: v2 maximizes accuracy density; v3 trades a modest efficiency drop for absolute peak accuracy.
+
+---
+
+## 🔄 Evolution Timeline
+
+| Phase | Focus | Notable Actions | Outcome |
+|-------|-------|-----------------|---------|
+| v1 Baseline | Structured depth & stability | Multi-block conv stack, dropout, StepLR | Solid generalization, mild underfit |
+| v2 Compression | Aggressive parameter reduction | Narrow channels, late GAP-style head, prune dropout | 61% fewer params, accuracy retained |
+| v3 Optimization | Training dynamics & fine fit | OneCycleLR, reduced aug, batch size ↓, grad clipping, selective widening | +0.37 pp over v2 test accuracy |
+
+---
+
+## 🧪 Training Configuration Reference
+
+| Aspect | v1 & v2 (shared) | v3 |
+|--------|------------------|----|
+| Optimizer | SGD (lr 0.05, momentum 0.9) | SGD (initial low lr ramped by OneCycle) |
+| Scheduler | StepLR(step=6, gamma=0.1) | OneCycleLR (pct_start=0.1) |
+| Loss | NLLLoss (log_softmax outputs) | Same |
+| Augment | Rot ±15°, trans 0.1 | Rot ±5°, trans 0.03 |
+| Gradient Clipping | No | Yes (norm=2) |
+| LR Monitoring | Epoch-level | Per-batch logged |
+
+---
+
+## 🧭 Recommended Next Steps
+1. Re-introduce a very light regularizer (e.g., label smoothing ε=0.05) to safely explore raising train accuracy without overfitting.
+2. Try Stochastic Weight Averaging (SWA) from epochs 10–15 for potential +0.02–0.05 pp test lift.
+3. Profile inference latency: compare v2 vs v3 to decide if the 736 extra params justify deployment.
+4. Automate results extraction (script to parse logs → JSON → table injection into README).
+5. Add learning rate and loss curves (matplotlib) for visual diagnostics.
+
+---
+
+## 🗂️ Log Provenance (Traceability)
+| Model | Log File | Verified Sections |
+|-------|----------|-------------------|
+| v1 | `logs/training_v1.log` | Dataloader args, 15 epoch loop, architecture dump |
+| v2 | `logs/training_v2.log` | Parameter count 4,232, epoch metrics, layer breakdown |
+| v3 | `logs/training_v3.log` | OneCycleLR config, widened channels, per-epoch metrics |
+
+All metrics in this report were re-derived directly from these logs (not manually retyped summaries).
+
+---
+
+## ✅ Summary
+- Achieved a peak of 99.45% test accuracy (v3) while staying <5K parameters.
+- Demonstrated >60% compression (v1 → v2) with negligible performance loss.
+- Showed that training dynamics (scheduler + augmentation tuning) can outperform pure architectural pruning for final gains.
+- Clear decision trade-off: choose v2 for efficiency or v3 for absolute accuracy.
+
+> If you would like an auto-generated plot bundle or a rollback of v3 to strict v2 parameter parity with retained OneCycleLR, request: "generate diagnostic bundle" or "roll back v3 params".
+
+---
+
+### 🔖 Appendix: Architecture Parameter Totals
+| Model | Total Params | Trainable | Non-Trainable |
+|-------|--------------|-----------|---------------|
+| v1 | 10,970 | 10,970 | 0 |
+| v2 | 4,232 | 4,232 | 0 |
+| v3 | 4,968 | 4,968 | 0 |
+
+---
+
+© 2025 – MNIST Lightweight CNN Iterative Optimization Report
+
+
+# 🧠 MNIST Lightweight CNN Suite
+
+This repository contains multiple progressively refined CNN models for the MNIST dataset along with a reproducible training pipeline, logging, and architecture introspection utilities.
+
+---
+
+## 📁 Folder & File Structure
+
+```
+ERA_v4_MNIST_model_S6/
+├── main.py                 # Entry point: choose & run model versions interactively
+├── model_v0.py             # (Optional baseline) Larger reference architecture
+├── model_v1.py             # Baseline structured CNN (~10.9K params)
+├── model_v2.py             # Parameter–efficient variant (~4.2K params)
+├── model_v3.py             # Tuned training dynamics variant (~5.0K params)
+├── data_setup.py           # DataLoader + transforms configuration
+├── train_test.py           # Training/testing loop with progress bars & metrics
+├── summarizer.py           # Architecture + parameter introspection utilities
+├── logger_setup.py         # Tqdm-safe logging initialization (console + file)
+├── README.md               # (This file)
+├── README_1909.md          # Detailed model progression & analysis report
+├── pyproject.toml          # Python project & dependency specification
+├── uv.lock                 # Locked dependency versions (managed by uv/pdm/poetry style)
+├── logs/                   # Generated log files per model run
+│   ├── training_v1.log
+│   ├── training_v2.log
+│   └── training_v3.log
+└── __pycache__/            # Python bytecode cache (ignored in VCS usually)
+```
+
+### 🔍 Key Directories
+- `logs/` — Persistent run artifacts (epoch metrics, architecture dumps).
+- `__pycache__/` — Auto-generated; safe to ignore/delete.
+
+---
+
+## 🗂️ File Descriptions
+
+| File | Purpose | Notable Highlights |
+|------|---------|-------------------|
+| `main.py` | Interactive runner for one or all model versions | Captures model summary + layer breakdown into logs; prompts for version & mode (params check vs full training) |
+| `model_v0.py` | (If present) Larger earlier baseline | Useful for contrast; not always used in current experiments |
+| `model_v1.py` | Structured baseline CNN | StepLR scheduling; moderate depth; dropout for regularization |
+| `model_v2.py` | Parameter–efficient compressed model | Aggressive channel pruning and global pooling-style classifier |
+| `model_v3.py` | Training dynamics optimized variant | OneCycleLR, lighter augmentation, gradient clipping, widened selective channels |
+| `data_setup.py` | Data pipeline setup | Defines train/test transforms; returns DataLoaders with configurable batch sizes |
+| `train_test.py` | Epoch loops for training & evaluation | Per-batch LR stepping support; tqdm progress; gradient clipping; metric logging |
+| `summarizer.py` | Architecture introspection & param stats | Layer-wise parameter listing; type frequency summary; torchsummary integration |
+| `logger_setup.py` | Central logging initialization | Idempotent setup; tqdm-friendly handler; optional file logging (`logs/training.log`) |
+| `README_1909.md` | Extended model evolution report | Targets / Results / Analysis for v1–v3 |
+| `pyproject.toml` | Project metadata & dependencies | Ensures reproducibility of environment |
+| `uv.lock` | Locked versions snapshot | Guarantees deterministic installs |
+
+---
+
+## ⚙️ Environment Setup
+
+Install dependencies (Python ≥3.10 recommended). If using `uv` (fast Python package manager):
+
+```powershell
+uv sync
+```
+
+Or using pip (if you manually extract dependencies from `pyproject.toml`):
+
+```powershell
+pip install -r requirements.txt
+```
+
+> If `requirements.txt` doesn’t exist, you can generate one via: `uv export --format requirements-txt > requirements.txt`.
+
+---
+
+## 🚀 How to Run
+
+### 1. Run Interactively (Recommended)
+You will be prompted for a model version and whether to run only parameter checks (architecture dump) or full training.
+
+```powershell
+python main.py
+```
+
+Prompts:
+1. `Enter model versions or leave blank for all versions one by one:`
+	- Blank → runs versions 0–3 sequentially if all exist (adjust as needed)
+	- `1` → only model_v1
+	- `2` → only model_v2, etc.
+2. `Enter 1 for params check only, 0 for full training/testing:`
+	- `1` → Only summary + architecture checks logged
+	- `0` → Full 15-epoch (or configured) training cycle
+
+### 2. Full Training for a Single Model (Example: v3)
+
+```powershell
+python main.py
+# When prompted:
+# Enter model versions...: 3
+# Enter 1 for params check...: 0
+```
+
+### 3. Architecture / Parameter Inspection Only
+
+```powershell
+python main.py
+# Enter model versions...: 2
+# Enter 1 for params check...: 1
+```
+
+### 4. Logging Output
+- Console displays tqdm progress with dynamic LR (if OneCycleLR).
+- File logs (if enabled in `main.py` via `setup_logging(log_to_file=True)`) are written to:
+  - `logs/training.log` (current session consolidated)
+  - `logs/training_v*.log` (per version if you have version-specific handlers already generated from earlier runs)
+
+### 5. Viewing Architecture Details
+Each run appends two structured blocks to the log:
+1. Torchsummary-style layer output
+2. `--- Model Architecture Checks ---` with per-layer parameter accountability
+
+---
+
+## 🧪 Example: What a Training Log Looks Like (Excerpt)
 
 ```text
-----------------------------------------------------------------
-        Layer (type)               Output Shape         Param #
-================================================================
-            Conv2d-1            [-1, 4, 28, 28]              36
-       BatchNorm2d-2            [-1, 4, 28, 28]               8
-              ReLU-3            [-1, 4, 28, 28]               0
-            Conv2d-4            [-1, 8, 28, 28]             288
-       BatchNorm2d-5            [-1, 8, 28, 28]              16
-              ReLU-6            [-1, 8, 28, 28]               0
-         MaxPool2d-7            [-1, 8, 14, 14]               0
-            Conv2d-8           [-1, 16, 14, 14]           1,152
-       BatchNorm2d-9           [-1, 16, 14, 14]              32
-             ReLU-10           [-1, 16, 14, 14]               0
-           Conv2d-11           [-1, 32, 14, 14]           4,608
-      BatchNorm2d-12           [-1, 32, 14, 14]              64
-             ReLU-13           [-1, 32, 14, 14]               0
-        MaxPool2d-14             [-1, 32, 7, 7]               0
-           Conv2d-15             [-1, 40, 7, 7]          11,520
-      BatchNorm2d-16             [-1, 40, 7, 7]              80
-             ReLU-17             [-1, 40, 7, 7]               0
-AdaptiveAvgPool2d-18             [-1, 40, 1, 1]               0
-           Linear-19                   [-1, 10]             410
-================================================================
-Total params: 18,214
-Trainable params: 18,214
-Non-trainable params: 0
-----------------------------------------------------------------
-```
-</details>
-
-### model_v1.py
-- **Structure:** Deeper, more modular. Initial conv (1→10), then blocks with 10→10→20, 20→10→10→20, 20→10→10, with BatchNorm, ReLU, Dropout, and MaxPool. Final conv uses 7x7 kernel to reduce to 1x1.
-- **Output:** No explicit GAP or FC; output is flattened. (You may want to add `log_softmax` in the forward or loss function.)
-- **Parameters:** ~10,970 (fewer than v0).
-
-<details>
-<summary>Click to expand model_v1.py architecture</summary>
-
-```text
-----------------------------------------------------------------
-        Layer (type)               Output Shape         Param #
-================================================================
-            Conv2d-1           [-1, 10, 26, 26]              90
-       BatchNorm2d-2           [-1, 10, 26, 26]              20
-              ReLU-3           [-1, 10, 26, 26]               0
-            Conv2d-4           [-1, 10, 24, 24]             900
-       BatchNorm2d-5           [-1, 10, 24, 24]              20
-              ReLU-6           [-1, 10, 24, 24]               0
-            Conv2d-7           [-1, 20, 22, 22]           1,800
-       BatchNorm2d-8           [-1, 20, 22, 22]              40
-              ReLU-9           [-1, 20, 22, 22]               0
-        Dropout2d-10           [-1, 20, 22, 22]               0
-        MaxPool2d-11           [-1, 20, 11, 11]               0
-           Conv2d-12           [-1, 10, 11, 11]             200
-      BatchNorm2d-13           [-1, 10, 11, 11]              20
-             ReLU-14           [-1, 10, 11, 11]               0
-           Conv2d-15             [-1, 10, 9, 9]             900
-      BatchNorm2d-16             [-1, 10, 9, 9]              20
-             ReLU-17             [-1, 10, 9, 9]               0
-           Conv2d-18             [-1, 20, 7, 7]           1,800
-      BatchNorm2d-19             [-1, 20, 7, 7]              40
-             ReLU-20             [-1, 20, 7, 7]               0
-        Dropout2d-21             [-1, 20, 7, 7]               0
-           Conv2d-22             [-1, 10, 7, 7]             200
-      BatchNorm2d-23             [-1, 10, 7, 7]              20
-             ReLU-24             [-1, 10, 7, 7]               0
-           Conv2d-25             [-1, 10, 1, 1]           4,900
-================================================================
-Total params: 10,970
-Trainable params: 10,970
-Non-trainable params: 0
-----------------------------------------------------------------
-```
-</details>
-
----
-
-## 📊 Training Results: Side-by-Side Epoch Table
-
-| Epoch | v0 Train Acc | v0 Test Acc | v1 Train Acc | v1 Test Acc |
-|-------|--------------|-------------|--------------|-------------|
-| 1     | 90.47%       | 97.43%      | 90.33%       | 98.21%      |
-| 2     | 97.43%       | 98.75%      | 95.19%       | 98.79%      |
-| 3     | 97.92%       | 98.94%      | 96.19%       | 98.75%      |
-| 4     | 98.07%       | 98.90%      | 96.42%       | 98.99%      |
-| 5     | 98.40%       | 99.04%      | 96.68%       | 99.12%      |
-| 6     | 98.52%       | 98.84%      | 96.81%       | 98.78%      |
-| 7     | 98.90%       | 99.35%      | 97.58%       | 99.27%      |
-| 8     | 98.96%       | 99.36%      | 97.70%       | 99.30%      |
-| 9     | 99.00%       | 99.34%      | 97.89%       | 99.29%      |
-| 10    | 99.03%       | 99.35%      | 97.89%       | 99.28%      |
-| 11    | 99.04%       | 99.38%      | 97.92%       | 99.40%      |
-| 12    | 99.01%       | 99.44%      | 97.95%       | 99.39%      |
-| 13    | 99.07%       | 99.41%      | 98.00%       | 99.39%      |
-| 14    | 99.14%       | 99.38%      | 97.99%       | 99.38%      |
-| 15    | 99.05%       | 99.41%      | 98.07%       | 99.37%      |
-
----
-
-## 📈 Visualizing Training
-
-You can plot the accuracy and loss curves for both models using matplotlib:
-
-```python
-import matplotlib.pyplot as plt
-
-# Example: Plotting accuracy curves
-epochs = list(range(1, 16))
-v0_train_acc = [90.47,97.43,97.92,98.07,98.40,98.52,98.90,98.96,99.00,99.03,99.04,99.01,99.07,99.14,99.05]
-v0_test_acc  = [97.43,98.75,98.94,98.90,99.04,98.84,99.35,99.36,99.34,99.35,99.38,99.44,99.41,99.38,99.41]
-v1_train_acc = [90.33,95.19,96.19,96.42,96.68,96.81,97.58,97.70,97.89,97.89,97.92,97.95,98.00,97.99,98.07]
-v1_test_acc  = [98.21,98.79,98.75,98.99,99.12,98.78,99.27,99.30,99.29,99.28,99.40,99.39,99.39,99.38,99.37]
-
-plt.figure(figsize=(10,5))
-plt.plot(epochs, v0_train_acc, label='v0 Train Acc', marker='o')
-plt.plot(epochs, v0_test_acc, label='v0 Test Acc', marker='o')
-plt.plot(epochs, v1_train_acc, label='v1 Train Acc', marker='x')
-plt.plot(epochs, v1_test_acc, label='v1 Test Acc', marker='x')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy (%)')
-plt.title('Train/Test Accuracy per Epoch')
-plt.legend()
-plt.grid(True)
-plt.show()
+2025-09-25 17:06:15,861 - INFO - Epoch 10/15: Train set final results: Average loss: 51.1472, Accuracy: 59006/60000 (98.34%)
+2025-09-25 17:06:33,657 - INFO - Epoch 10/15:Test set final results: Average loss: 0.0297, Accuracy: 9905/10000 (99.05%)
+...
+2025-09-25 17:14:50,045 - INFO - --- Model Architecture Checks ---
+2025-09-25 17:14:50,045 - INFO - Total Parameters: 4,968
 ```
 
 ---
 
-## 📝 Summary
+## 🧬 Choosing a Model
 
-- **model_v0.py**: Simpler, more parameters, achieves high accuracy quickly.
-- **model_v1.py**: Deeper, more regularization, fewer parameters, matches v0's accuracy.
-- Both models are highly efficient for MNIST and demonstrate the power of compact CNNs.
+| Version | When to Use | Trade-Off |
+|---------|-------------|-----------|
+| v1 | Need a stable baseline with moderate params | Slight underfit; good generalization |
+| v2 | Need max parameter efficiency | Slight accuracy drop vs v1; very dense performance |
+| v3 | Need highest accuracy (<5K params) | Slight param increase vs v2; more complex schedule |
 
----
-
-# Lightweight MNIST CNN Model (18,214 Parameters)
-
-This project implements a **compact Convolutional Neural Network (CNN)** for the MNIST handwritten digits dataset.  
-The model is optimized to stay **under 20,000 trainable parameters** while still achieving **>99.4% accuracy** on the MNIST test set.
+For detailed comparative Targets / Results / Analysis see `README_1909.md`.
 
 ---
 
-## 🚀 Model Highlights **model_v0.py**
-- **Dataset**: [MNIST](http://yann.lecun.com/exdb/mnist/) (28x28 grayscale digits, 10 classes)  
-- **Total Parameters**: **18,214** (all trainable)  
-- **Test Accuracy**: **99.44%** (within 15 epochs)  
-- **Efficiency**: Uses **Batch Normalization + Global Average Pooling** for stability and parameter reduction  
+## 🔧 Modifying Hyperparameters
+
+Edit inside the model config functions (`set_config_v*()` in each `model_v*.py`):
+- Learning rate / optimizer
+- Scheduler (swap OneCycleLR ↔ StepLR)
+- Batch size / transform overrides
+
+Augmentations can be customized via:
+- `model_v*_config.get_train_transforms()` (if defined)
+- Or override DataSetup arguments before DataLoader creation.
 
 ---
 
-## 📊 Training Results (Epoch by Epoch)
-
-| Epoch | Train Loss | Train Accuracy | Test Loss | Test Accuracy |
-|-------|------------|----------------|-----------|---------------|
-| 1     | 0.0049     | 90.47%         | 0.0001    | 97.43%        |
-| 2     | 0.0014     | 97.43%         | 0.0000    | 98.75%        |
-| 3     | 0.0011     | 97.92%         | 0.0000    | 98.94%        |
-| 4     | 0.0009     | 98.07%         | 0.0000    | 98.90%        |
-| 5     | 0.0008     | 98.40%         | 0.0000    | 99.04%        |
-| 6     | 0.0008     | 98.52%         | 0.0000    | 98.84%        |
-| 7     | 0.0006     | 98.90%         | 0.0000    | 99.35%        |
-| 8     | 0.0005     | 98.96%         | 0.0000    | 99.36%        |
-| 9     | 0.0005     | 99.00%         | 0.0000    | 99.34%        |
-| 10    | 0.0005     | 99.03%         | 0.0000    | 99.35%        |
-| 11    | 0.0005     | 99.04%         | 0.0000    | 99.38%        |
-| 12    | 0.0005     | 99.01%         | 0.0000    | 99.44% ✅     |
-| 13    | 0.0005     | 99.07%         | 0.0000    | 99.41%        |
-| 14    | 0.0005     | 99.14%         | 0.0000    | 99.38%        |
-| 15    | 0.0005     | 99.05%         | 0.0000    | 99.41%        |
+## 🧾 Reproducing Results
+1. Sync/install dependencies.
+2. Run each model with full training (param check flag = 0).
+3. Inspect `logs/training_v*.log` for final and best epoch metrics.
+4. Cross-reference architecture via appended parameter summaries.
 
 ---
 
-## 🏗️ Model Architecture **model_v0.py**
+## 🛠 Troubleshooting
 
-```text
-----------------------------------------------------------------
-        Layer (type)               Output Shape         Param #
-================================================================
-            Conv2d-1            [-1, 4, 28, 28]              36
-       BatchNorm2d-2            [-1, 4, 28, 28]               8
-              ReLU-3            [-1, 4, 28, 28]               0
-            Conv2d-4            [-1, 8, 28, 28]             288
-       BatchNorm2d-5            [-1, 8, 28, 28]              16
-              ReLU-6            [-1, 8, 28, 28]               0
-         MaxPool2d-7            [-1, 8, 14, 14]               0
-            Conv2d-8           [-1, 16, 14, 14]           1,152
-       BatchNorm2d-9           [-1, 16, 14, 14]              32
-             ReLU-10           [-1, 16, 14, 14]               0
-           Conv2d-11           [-1, 32, 14, 14]           4,608
-      BatchNorm2d-12           [-1, 32, 14, 14]              64
-             ReLU-13           [-1, 32, 14, 14]               0
-        MaxPool2d-14             [-1, 32, 7, 7]               0
-           Conv2d-15             [-1, 40, 7, 7]          11,520
-      BatchNorm2d-16             [-1, 40, 7, 7]              80
-             ReLU-17             [-1, 40, 7, 7]               0
-AdaptiveAvgPool2d-18             [-1, 40, 1, 1]               0
-           Linear-19                   [-1, 10]             410
-================================================================
-Total params: 18,214
-Trainable params: 18,214
-Non-trainable params: 0
-----------------------------------------------------------------
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Log truncates mid-run | Re-init logging in subprocess | Ensure running via `python main.py` (not importing main elsewhere) |
+| No LR shown in tqdm | Using StepLR (epoch-based) | Switch to OneCycleLR (v3) or add batch stepping flag |
+| CUDA not used | GPU not available | Check `torch.cuda.is_available()`; install CUDA-enabled PyTorch |
+| Slow start on Windows | Dataset download or first transform compile | Allow first epoch to finish; subsequent runs faster |
 
-**model_v1.py**
-Improvements:
-1) Reducing model parameter using christmas tree structure 
+---
 
-----------------------------------------------------------------
-        Layer (type)               Output Shape         Param #
-================================================================
-            Conv2d-1           [-1, 10, 26, 26]              90
-       BatchNorm2d-2           [-1, 10, 26, 26]              20
-              ReLU-3           [-1, 10, 26, 26]               0
-            Conv2d-4           [-1, 10, 24, 24]             900
-       BatchNorm2d-5           [-1, 10, 24, 24]              20
-              ReLU-6           [-1, 10, 24, 24]               0
-            Conv2d-7           [-1, 20, 22, 22]           1,800
-       BatchNorm2d-8           [-1, 20, 22, 22]              40
-              ReLU-9           [-1, 20, 22, 22]               0
-        Dropout2d-10           [-1, 20, 22, 22]               0
-        MaxPool2d-11           [-1, 20, 11, 11]               0
-           Conv2d-12           [-1, 10, 11, 11]             200
-      BatchNorm2d-13           [-1, 10, 11, 11]              20
-             ReLU-14           [-1, 10, 11, 11]               0
-           Conv2d-15             [-1, 10, 9, 9]             900
-      BatchNorm2d-16             [-1, 10, 9, 9]              20
-             ReLU-17             [-1, 10, 9, 9]               0
-           Conv2d-18             [-1, 20, 7, 7]           1,800
-      BatchNorm2d-19             [-1, 20, 7, 7]              40
-             ReLU-20             [-1, 20, 7, 7]               0
-        Dropout2d-21             [-1, 20, 7, 7]               0
-           Conv2d-22             [-1, 10, 7, 7]             200
-      BatchNorm2d-23             [-1, 10, 7, 7]              20
-             ReLU-24             [-1, 10, 7, 7]               0
-           Conv2d-25             [-1, 10, 1, 1]           4,900
-================================================================
-Total params: 10,970
-Trainable params: 10,970
-Non-trainable params: 0
-----------------------------------------------------------------
-Input size (MB): 0.00
-Forward/backward pass size (MB): 0.69
-Params size (MB): 0.04
-Estimated Total Size (MB): 0.73
-----------------------------------------------------------------
-Epoch 1
-Train Loss=0.0047 Accuracy=90.33: 100%|██████████| 938/938 [00:28<00:00, 32.77it/s]
+## 📌 Next Additions (Optional Enhancements)
+- Auto log parsing → JSON → metrics table regeneration
+- Learning curve plots export (`plot_results()` already scaffolded)
+- SWA / EMA improvements path
+- Label smoothing for final tenths of a percent
 
-Test set: Average loss: 0.0001, Accuracy: 9821/10000 (98.21%)
+---
 
-Epoch 2
-Train Loss=0.0024 Accuracy=95.19: 100%|██████████| 938/938 [00:28<00:00, 32.99it/s]
+## 🙌 Attribution
+Experimental workflow aligned with incremental design → compression → training dynamics optimization. Logs provide ground-truth traceability.
 
-Test set: Average loss: 0.0000, Accuracy: 9879/10000 (98.79%)
+---
 
-Epoch 3
-Train Loss=0.0019 Accuracy=96.19: 100%|██████████| 938/938 [00:28<00:00, 32.55it/s]
+### ✅ Quick Start Recap
+```powershell
+uv sync              # or pip install -r requirements.txt
+python main.py       # choose model version and mode
+type logs\training_v3.log | more  # inspect results (Windows PowerShell)
+```
 
-Test set: Average loss: 0.0000, Accuracy: 9875/10000 (98.75%)
+---
 
-Epoch 4
-Train Loss=0.0019 Accuracy=96.42: 100%|██████████| 938/938 [00:28<00:00, 32.86it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9899/10000 (98.99%)
-
-Epoch 5
-Train Loss=0.0017 Accuracy=96.68: 100%|██████████| 938/938 [00:28<00:00, 33.01it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9912/10000 (99.12%)
-
-Epoch 6
-Train Loss=0.0016 Accuracy=96.81: 100%|██████████| 938/938 [00:29<00:00, 32.16it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9878/10000 (98.78%)
-
-Epoch 7
-Train Loss=0.0012 Accuracy=97.58: 100%|██████████| 938/938 [00:28<00:00, 32.94it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9927/10000 (99.27%)
-
-Epoch 8
-Train Loss=0.0011 Accuracy=97.70: 100%|██████████| 938/938 [00:29<00:00, 32.34it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9930/10000 (99.30%)
-
-Epoch 9
-Train Loss=0.0011 Accuracy=97.89: 100%|██████████| 938/938 [00:28<00:00, 32.59it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9929/10000 (99.29%)
-
-Epoch 10
-Train Loss=0.0011 Accuracy=97.89: 100%|██████████| 938/938 [00:28<00:00, 32.42it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9928/10000 (99.28%)
-
-Epoch 11
-Train Loss=0.0011 Accuracy=97.92: 100%|██████████| 938/938 [00:28<00:00, 33.34it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9940/10000 (99.40%)
-
-Epoch 12
-Train Loss=0.0010 Accuracy=97.95: 100%|██████████| 938/938 [00:28<00:00, 32.98it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9939/10000 (99.39%)
-
-Epoch 13
-Train Loss=0.0010 Accuracy=98.00: 100%|██████████| 938/938 [00:28<00:00, 33.48it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9939/10000 (99.39%)
-
-Epoch 14
-Train Loss=0.0010 Accuracy=97.99: 100%|██████████| 938/938 [00:28<00:00, 32.98it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9938/10000 (99.38%)
-
-Epoch 15
-Train Loss=0.0010 Accuracy=98.07: 100%|██████████| 938/938 [00:29<00:00, 31.69it/s]
-
-Test set: Average loss: 0.0000, Accuracy: 9937/10000 (99.37%)
-
-
-
-** model_v2.py **
-
-----------------------------------------------------------------
-        Layer (type)               Output Shape         Param #
-================================================================
-            Conv2d-1            [-1, 4, 28, 28]              36
-       BatchNorm2d-2            [-1, 4, 28, 28]               8
-              ReLU-3            [-1, 4, 28, 28]               0
-            Conv2d-4            [-1, 8, 28, 28]             288
-       BatchNorm2d-5            [-1, 8, 28, 28]              16
-              ReLU-6            [-1, 8, 28, 28]               0
-         MaxPool2d-7            [-1, 8, 14, 14]               0
-            Conv2d-8           [-1, 10, 14, 14]             720
-       BatchNorm2d-9           [-1, 10, 14, 14]              20
-             ReLU-10           [-1, 10, 14, 14]               0
-        Dropout2d-11           [-1, 10, 14, 14]               0
-           Conv2d-12           [-1, 12, 14, 14]           1,080
-      BatchNorm2d-13           [-1, 12, 14, 14]              24
-             ReLU-14           [-1, 12, 14, 14]               0
-        MaxPool2d-15             [-1, 12, 7, 7]               0
-           Conv2d-16              [-1, 8, 7, 7]              96
-      BatchNorm2d-17              [-1, 8, 7, 7]              16
-             ReLU-18              [-1, 8, 7, 7]               0
-           Conv2d-19             [-1, 12, 7, 7]             864
-      BatchNorm2d-20             [-1, 12, 7, 7]              24
-             ReLU-21             [-1, 12, 7, 7]               0
-           Conv2d-22             [-1, 10, 7, 7]             120
-      BatchNorm2d-23             [-1, 10, 7, 7]              20
-             ReLU-24             [-1, 10, 7, 7]               0
-           Conv2d-25             [-1, 10, 5, 5]             900
-        AvgPool2d-26             [-1, 10, 1, 1]               0
-          Flatten-27                   [-1, 10]               0
-================================================================
-Total params: 4,232
-Trainable params: 4,232
-Non-trainable params: 0
-----------------------------------------------------------------
-Input size (MB): 0.00
-Forward/backward pass size (MB): 0.38
-Params size (MB): 0.02
-Estimated Total Size (MB): 0.40
-----------------------------------------------------------------
-Epoch 1
-Train Loss=0.0030 Accuracy=88.06: 100%|██████████| 469/469 [00:58<00:00,  8.00it/s]
-
-Test set: Average loss: 0.2505, Accuracy: 9185/10000 (91.85%)
-
-Epoch 2
-Train Loss=0.0009 Accuracy=96.39: 100%|██████████| 469/469 [00:59<00:00,  7.94it/s]
-
-Test set: Average loss: 0.0691, Accuracy: 9783/10000 (97.83%)
-
-Epoch 3
-Train Loss=0.0007 Accuracy=97.13: 100%|██████████| 469/469 [00:59<00:00,  7.88it/s]
-
-Test set: Average loss: 0.0511, Accuracy: 9844/10000 (98.44%)
-
-Epoch 4
-Train Loss=0.0007 Accuracy=97.41: 100%|██████████| 469/469 [00:58<00:00,  8.00it/s]
-
-Test set: Average loss: 0.0468, Accuracy: 9855/10000 (98.55%)
-
-Epoch 5
-Train Loss=0.0006 Accuracy=97.76: 100%|██████████| 469/469 [00:59<00:00,  7.88it/s]
-
-Test set: Average loss: 0.0371, Accuracy: 9878/10000 (98.78%)
-
-Epoch 6
-Train Loss=0.0006 Accuracy=97.76: 100%|██████████| 469/469 [00:59<00:00,  7.92it/s]
-
-Test set: Average loss: 0.0418, Accuracy: 9858/10000 (98.58%)
-
-Epoch 7
-Train Loss=0.0004 Accuracy=98.31: 100%|██████████| 469/469 [00:59<00:00,  7.85it/s]
-
-Test set: Average loss: 0.0274, Accuracy: 9911/10000 (99.11%)
-
-Epoch 8
-Train Loss=0.0004 Accuracy=98.49: 100%|██████████| 469/469 [00:59<00:00,  7.82it/s]
-
-Test set: Average loss: 0.0271, Accuracy: 9910/10000 (99.10%)
-
-Epoch 9
-Train Loss=0.0004 Accuracy=98.51: 100%|██████████| 469/469 [00:59<00:00,  7.91it/s]
-
-Test set: Average loss: 0.0266, Accuracy: 9913/10000 (99.13%)
-
-Epoch 10
-Train Loss=0.0004 Accuracy=98.46: 100%|██████████| 469/469 [00:59<00:00,  7.93it/s]
-
-Test set: Average loss: 0.0258, Accuracy: 9907/10000 (99.07%)
-
-Epoch 11
-Train Loss=0.0004 Accuracy=98.61: 100%|██████████| 469/469 [00:59<00:00,  7.91it/s]
-
-Test set: Average loss: 0.0270, Accuracy: 9911/10000 (99.11%)
-
-Epoch 12
-Train Loss=0.0004 Accuracy=98.60: 100%|██████████| 469/469 [00:59<00:00,  7.85it/s]
-
-Test set: Average loss: 0.0257, Accuracy: 9916/10000 (99.16%)
-
-Epoch 13
-Train Loss=0.0004 Accuracy=98.57: 100%|██████████| 469/469 [00:59<00:00,  7.86it/s]
-
-Test set: Average loss: 0.0259, Accuracy: 9915/10000 (99.15%)
-
-Epoch 14
-Train Loss=0.0004 Accuracy=98.58: 100%|██████████| 469/469 [00:58<00:00,  7.98it/s]
-
-Test set: Average loss: 0.0255, Accuracy: 9915/10000 (99.15%)
-
-Epoch 15
-Train Loss=0.0004 Accuracy=98.63: 100%|██████████| 469/469 [00:59<00:00,  7.94it/s]
-
-Test set: Average loss: 0.0254, Accuracy: 9916/10000 (99.16%)
-
---- Model Architecture Checks ---
-Total Parameter Count in Model: 4232
-
-Layer-wise Parameter Details (in model order):
---------------------------------------------------------------------------------
-
-Block: input_conv (nn.Sequential)
-  input_conv.0 (Conv2d)                    | Params:     36 | Convolution: 1 input channels, 4 output channels, kernel size (3, 3), bias False
-  input_conv.1 (BatchNorm2d)               | Params:      8 | BatchNorm: 4 features, affine True
-  input_conv.2 (ReLU)                      | Params:      0 | Activation: ReLU (no parameters)
-  input_conv.3 (Conv2d)                    | Params:    288 | Convolution: 4 input channels, 8 output channels, kernel size (3, 3), bias False
-  input_conv.4 (BatchNorm2d)               | Params:     16 | BatchNorm: 8 features, affine True
-  input_conv.5 (ReLU)                      | Params:      0 | Activation: ReLU (no parameters)
-  input_conv.6 (MaxPool2d)                 | Params:      0 | MaxPooling: kernel size 2, stride 2
-
-Block: feature_block (nn.Sequential)
-  feature_block.0 (Conv2d)                 | Params:    720 | Convolution: 8 input channels, 10 output channels, kernel size (3, 3), bias False
-  feature_block.1 (BatchNorm2d)            | Params:     20 | BatchNorm: 10 features, affine True
-  feature_block.2 (ReLU)                   | Params:      0 | Activation: ReLU (no parameters)
-  feature_block.3 (Dropout2d)              | Params:      0 | 
-  feature_block.4 (Conv2d)                 | Params:   1080 | Convolution: 10 input channels, 12 output channels, kernel size (3, 3), bias False
-  feature_block.5 (BatchNorm2d)            | Params:     24 | BatchNorm: 12 features, affine True
-  feature_block.6 (ReLU)                   | Params:      0 | Activation: ReLU (no parameters)
-  feature_block.7 (MaxPool2d)              | Params:      0 | MaxPooling: kernel size 2, stride 2
-
-Block: pattern_block (nn.Sequential)
-  pattern_block.0 (Conv2d)                 | Params:     96 | Convolution: 12 input channels, 8 output channels, kernel size (1, 1), bias False
-  pattern_block.1 (BatchNorm2d)            | Params:     16 | BatchNorm: 8 features, affine True
-  pattern_block.2 (ReLU)                   | Params:      0 | Activation: ReLU (no parameters)
-  pattern_block.3 (Conv2d)                 | Params:    864 | Convolution: 8 input channels, 12 output channels, kernel size (3, 3), bias False
-  pattern_block.4 (BatchNorm2d)            | Params:     24 | BatchNorm: 12 features, affine True
-  pattern_block.5 (ReLU)                   | Params:      0 | Activation: ReLU (no parameters)
-
-Block: classifier (nn.Sequential)
-  classifier.0 (Conv2d)                    | Params:    120 | Convolution: 12 input channels, 10 output channels, kernel size (1, 1), bias False
-  classifier.1 (BatchNorm2d)               | Params:     20 | BatchNorm: 10 features, affine True
-  classifier.2 (ReLU)                      | Params:      0 | Activation: ReLU (no parameters)
-  classifier.3 (Conv2d)                    | Params:    900 | Convolution: 10 input channels, 10 output channels, kernel size (3, 3), bias False
-  classifier.4 (AvgPool2d)                 | Params:      0 | 
-  classifier.5 (Flatten)                   | Params:      0 | 
---------------------------------------------------------------------------------
-
-Summary:
-BatchNorm2d layers used: 7
-Dropout layers used: 0
-Fully Connected (Linear) layers used: 0
-Global Average Pooling layers used: 0
----------------------------------
-
-
-** model_v3.py ** 
-
-----------------------------------------------------------------
-        Layer (type)               Output Shape         Param #
-================================================================
-            Conv2d-1            [-1, 8, 28, 28]              72
-       BatchNorm2d-2            [-1, 8, 28, 28]              16
-              ReLU-3            [-1, 8, 28, 28]               0
-            Conv2d-4           [-1, 10, 28, 28]             720
-       BatchNorm2d-5           [-1, 10, 28, 28]              20
-              ReLU-6           [-1, 10, 28, 28]               0
-         MaxPool2d-7           [-1, 10, 14, 14]               0
-            Conv2d-8           [-1, 10, 14, 14]             900
-       BatchNorm2d-9           [-1, 10, 14, 14]              20
-             ReLU-10           [-1, 10, 14, 14]               0
-        Dropout2d-11           [-1, 10, 14, 14]               0
-           Conv2d-12           [-1, 16, 14, 14]           1,440
-      BatchNorm2d-13           [-1, 16, 14, 14]              32
-             ReLU-14           [-1, 16, 14, 14]               0
-        MaxPool2d-15             [-1, 16, 7, 7]               0
-           Conv2d-16             [-1, 10, 7, 7]             160
-      BatchNorm2d-17             [-1, 10, 7, 7]              20
-             ReLU-18             [-1, 10, 7, 7]               0
-           Conv2d-19             [-1, 16, 7, 7]           1,440
-      BatchNorm2d-20             [-1, 16, 7, 7]              32
-             ReLU-21             [-1, 16, 7, 7]               0
-           Conv2d-22             [-1, 10, 5, 5]           1,440
-      BatchNorm2d-23             [-1, 10, 5, 5]              20
-             ReLU-24             [-1, 10, 5, 5]               0
-           Conv2d-25             [-1, 16, 3, 3]           1,440
-        AvgPool2d-26             [-1, 16, 1, 1]               0
-           Conv2d-27             [-1, 10, 1, 1]             160
-================================================================
-Total params: 7,932
-Trainable params: 7,932
-Non-trainable params: 0
-----------------------------------------------------------------
-Input size (MB): 0.00
-Forward/backward pass size (MB): 0.51
-Params size (MB): 0.03
-Estimated Total Size (MB): 0.54
-----------------------------------------------------------------
-Epoch 1
-Train Loss=0.0081 Accuracy=91.78: 100%|██████████| 1875/1875 [01:02<00:00, 30.06it/s]
-
-Test set: Average loss: 0.0838, Accuracy: 9740/10000 (97.40%)
-
-Epoch 2
-Train Loss=0.0027 Accuracy=97.37: 100%|██████████| 1875/1875 [01:02<00:00, 29.92it/s]
-
-Test set: Average loss: 0.0548, Accuracy: 9826/10000 (98.26%)
-
-Epoch 3
-Train Loss=0.0022 Accuracy=97.84: 100%|██████████| 1875/1875 [01:02<00:00, 29.94it/s]
-
-Test set: Average loss: 0.0327, Accuracy: 9896/10000 (98.96%)
-
-Epoch 4
-Train Loss=0.0019 Accuracy=98.08: 100%|██████████| 1875/1875 [01:03<00:00, 29.71it/s]
-
-Test set: Average loss: 0.0332, Accuracy: 9894/10000 (98.94%)
-
-Epoch 5
-Train Loss=0.0013 Accuracy=98.69: 100%|██████████| 1875/1875 [01:01<00:00, 30.43it/s]
-
-Test set: Average loss: 0.0223, Accuracy: 9928/10000 (99.28%)
-
-Epoch 6
-Train Loss=0.0012 Accuracy=98.83: 100%|██████████| 1875/1875 [01:02<00:00, 30.19it/s]
-
-Test set: Average loss: 0.0219, Accuracy: 9935/10000 (99.35%)
-
-Epoch 7
-Train Loss=0.0012 Accuracy=98.86: 100%|██████████| 1875/1875 [01:01<00:00, 30.70it/s]
-
-Test set: Average loss: 0.0209, Accuracy: 9934/10000 (99.34%)
-
-Epoch 8
-Train Loss=0.0012 Accuracy=98.81: 100%|██████████| 1875/1875 [01:01<00:00, 30.38it/s]
-
-Test set: Average loss: 0.0207, Accuracy: 9937/10000 (99.37%)
-
-Epoch 9
-Train Loss=0.0011 Accuracy=98.95: 100%|██████████| 1875/1875 [01:01<00:00, 30.32it/s]
-
-Test set: Average loss: 0.0202, Accuracy: 9940/10000 (99.40%)
-
-Epoch 10
-Train Loss=0.0011 Accuracy=98.91: 100%|██████████| 1875/1875 [01:01<00:00, 30.32it/s]
-
-Test set: Average loss: 0.0208, Accuracy: 9939/10000 (99.39%)
-
-Epoch 11
-Train Loss=0.0011 Accuracy=98.89: 100%|██████████| 1875/1875 [01:00<00:00, 31.25it/s]
-
-Test set: Average loss: 0.0200, Accuracy: 9939/10000 (99.39%)
-
-Epoch 12
-Train Loss=0.0011 Accuracy=98.88: 100%|██████████| 1875/1875 [00:58<00:00, 32.01it/s]
-
-Test set: Average loss: 0.0202, Accuracy: 9940/10000 (99.40%)
-
-Epoch 13
-Train Loss=0.0010 Accuracy=98.93: 100%|██████████| 1875/1875 [00:58<00:00, 32.02it/s]
-
-Test set: Average loss: 0.0206, Accuracy: 9944/10000 (99.44%)
-
-Epoch 14
-Train Loss=0.0011 Accuracy=98.93: 100%|██████████| 1875/1875 [00:59<00:00, 31.76it/s]
-
-Test set: Average loss: 0.0204, Accuracy: 9938/10000 (99.38%)
-
-Epoch 15
-Train Loss=0.0011 Accuracy=98.95: 100%|██████████| 1875/1875 [00:59<00:00, 31.74it/s]
-
-Test set: Average loss: 0.0202, Accuracy: 9938/10000 (99.38%)
-
+© 2025 MNIST Lightweight CNN Experiment Suite
 
